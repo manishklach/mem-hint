@@ -44,6 +44,7 @@ static struct platform_device *mem_hint_platform_dev;
 static void __iomem *mc_mmio_base;
 static ktime_t last_transition_time;
 static u8 mem_hint_security_level;
+static bool illustrative_hw_writes;
 
 extern const struct attribute_group *mem_hint_driver_groups[];
 extern u32 decode_trcd;
@@ -58,6 +59,9 @@ extern u32 idle_vswing_mv;
 module_param_named(active_channel, active_channel_param, int, 0644);
 MODULE_PARM_DESC(active_channel,
 		 "Hardware channel: 0=MSR(default) 1=MMIO 2=CXL_DVSEC");
+module_param_named(illustrative_hw_writes, illustrative_hw_writes, bool, 0644);
+MODULE_PARM_DESC(illustrative_hw_writes,
+		 "Allow illustrative privileged writes for reference testing");
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Manish KL");
@@ -98,6 +102,11 @@ static u8 scale_timing(u8 nominal, u8 proposed, u8 priority)
 		scaled = 0xff;
 
 	return (u8)scaled;
+}
+
+int mem_hint_should_touch_hw(void)
+{
+	return illustrative_hw_writes ? 1 : 0;
 }
 
 static struct phy_config phase_to_phy_config(const struct mem_workload_hint *h)
@@ -199,13 +208,27 @@ int mem_hint_apply(const struct mem_workload_hint *h)
 
 	switch (active_channel) {
 	case CH_MSR:
-		wrmsrl(MEM_HINT_MSR, val);
+		/*
+		 * This repository models the interface contract only. The MSR
+		 * address is illustrative and disabled by default so loading
+		 * the module on a development system does not touch undefined
+		 * hardware state.
+		 */
+		if (mem_hint_should_touch_hw())
+			wrmsrl(MEM_HINT_MSR, val);
+		else
+			pr_debug("mem_hint: illustrative MSR write suppressed (0x%llx)\n",
+				 val);
 		break;
 	case CH_MMIO:
-		if (mc_mmio_base)
+		/*
+		 * MMIO handling is also illustrative. A production driver would
+		 * discover and map a documented controller window first.
+		 */
+		if (mem_hint_should_touch_hw() && mc_mmio_base)
 			iowrite64(val, mc_mmio_base + MEM_HINT_MMIO_OFFSET);
 		else
-			pr_debug("mem_hint: MMIO channel selected but not mapped\n");
+			pr_debug("mem_hint: illustrative MMIO write suppressed or unmapped\n");
 		break;
 	case CH_CXL_DVSEC:
 		pr_debug("mem_hint: CXL DVSEC path: illustrative stub write 0x%llx\n",
@@ -342,6 +365,8 @@ static int __init mem_hint_init(void)
 
 	pr_info("mem_hint: loaded, channel=%d, patent IN 202641053160 reference implementation\n",
 		active_channel);
+	if (!illustrative_hw_writes)
+		pr_info("mem_hint: illustrative hardware writes are disabled by default\n");
 	return 0;
 
 err_sysfs:

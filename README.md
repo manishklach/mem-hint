@@ -63,6 +63,71 @@ PMU auto-classification lets the kernel infer phase transitions every `100 us` f
 
 Sysfs policy tuning is the operator-facing control plane for field adaptation. Thresholds and per-phase policy defaults can be updated live while explicit hints and PMU classification continue using the same interface contract.
 
+## Why This Matters Now
+
+AI runtimes are increasingly memory-phase-sensitive while system software still treats memory behavior as mostly static. Long-context inference, decode-heavy serving, tool-augmented agent loops, and distributed training all place materially different demands on memory latency, bandwidth, and signaling margin. A narrow interface for phase intent is becoming easier to justify even when the underlying hardware hooks are not standardized yet.
+
+This repository is useful now because it makes that interface concrete. It gives kernel, runtime, firmware, and architecture teams something specific to review, test, critique, and refine instead of discussing the concept only at a whiteboard level.
+
+## What Is Real Vs Illustrative
+
+Real in this repository:
+
+- the `/dev/mem_hint` character-device contract
+- userspace C and Python client interfaces
+- sysfs policy and status surface
+- a compilable Linux kernel reference module structure
+- validation and CI checks for repository hygiene
+
+Illustrative in this repository:
+
+- `MEM_HINT_MSR` and any privileged hardware register address
+- MMIO controller mappings
+- CXL DVSEC register programming
+- PMU signal collection logic beyond a simulated classifier stub
+- the safety limiter as hardware enforcement rather than a software model
+
+This is a reference implementation, not real hardware programming. By default the kernel module suppresses illustrative privileged writes so a development machine does not touch undefined MSR or MMIO state.
+
+## Current Implementation Status
+
+- `/dev` interface: implemented
+- Python client and scheduler: implemented
+- Userspace examples: implemented
+- PMU classifier: simulated
+- MSR, MMIO, and CXL paths: illustrative and disabled by default
+- Safety limiter: software model of a hardware concept
+- Real silicon support: not implemented
+
+See [docs/status.md](docs/status.md) for a more candid implementation matrix.
+
+## How To Validate Locally
+
+```bash
+# Full repo validation
+make validate
+
+# Kernel-only build check
+make kernel
+
+# Userspace library and examples
+make userspace
+
+# Python syntax and optional lint
+make python-check
+```
+
+The validation script checks required files, Python syntax, optional `flake8`, kernel buildability when local headers are available, and patent notice coverage in `kernel/*.c` and `kernel/*.h`.
+
+## Roadmap Before Public Release
+
+- add diagrams and screenshots for the sysfs and CLI flow
+- verify GitHub Pages links and the blog-page integration
+- expand the validation script with markdown/link checks
+- add explicit runtime examples for more realistic serving code paths
+- keep kernel behavior conservative and clearly illustrative
+- review naming, comments, and licensing for public-facing clarity
+
 ## sysfs Interface
 
 Key paths:

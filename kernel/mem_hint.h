@@ -69,6 +69,7 @@ void mem_hint_pmu_exit(void);
 int mem_hint_sysfs_init(void);
 void mem_hint_sysfs_exit(void);
 void mem_hint_sysfs_notify_phase_change(void);
+int mem_hint_should_touch_hw(void);
 struct phy_config safety_clamp(struct phy_config proposed,
 			       struct jedec_limits limits,
 			       struct ecc_telemetry ecc);
