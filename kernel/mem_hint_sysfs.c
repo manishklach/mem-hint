@@ -8,6 +8,8 @@
 #include <linux/device/driver.h>
 #include <linux/sysfs.h>
 
+#include "mem_hint.h"
+
 struct mem_hint_driver_private_view {
 	struct kobject kobj;
 };
@@ -23,11 +25,13 @@ u32 idle_vswing_mv = 240;
 
 static ssize_t u32_show(struct device_driver *driver, char *buf, u32 *value)
 {
+	(void)driver;
 	return sysfs_emit(buf, "%u\n", *value);
 }
 
 static ssize_t s32_show(struct device_driver *driver, char *buf, s32 *value)
 {
+	(void)driver;
 	return sysfs_emit(buf, "%d\n", *value);
 }
 
@@ -113,22 +117,26 @@ MEM_HINT_RW_U32(idle_cmd_rate_floor, idle_cmd_thresh, 0, 1000000);
 
 static ssize_t current_phase_show(struct device_driver *driver, char *buf)
 {
+	(void)driver;
 	return sysfs_emit(buf, "%d\n", atomic_read(&current_phase_id));
 }
 
 static ssize_t ecc_correctable_rate_show(struct device_driver *driver, char *buf)
 {
+	(void)driver;
 	return sysfs_emit(buf, "%llu\n", ecc_state.correctable_rate);
 }
 
 static ssize_t ecc_uncorrectable_count_show(struct device_driver *driver,
 					    char *buf)
 {
+	(void)driver;
 	return sysfs_emit(buf, "%llu\n", ecc_state.uncorrectable_count);
 }
 
 static ssize_t read_retry_count_show(struct device_driver *driver, char *buf)
 {
+	(void)driver;
 	return sysfs_emit(buf, "%llu\n", ecc_state.read_retry_count);
 }
 
@@ -136,6 +144,7 @@ static ssize_t last_transition_ms_show(struct device_driver *driver, char *buf)
 {
 	s64 delta_ms;
 
+	(void)driver;
 	delta_ms = ktime_to_ms(ktime_sub(ktime_get(), last_transition_time));
 	if (delta_ms < 0)
 		delta_ms = 0;
@@ -145,11 +154,13 @@ static ssize_t last_transition_ms_show(struct device_driver *driver, char *buf)
 
 static ssize_t p99_latency_ns_show(struct device_driver *driver, char *buf)
 {
+	(void)driver;
 	return sysfs_emit(buf, "%llu\n", ecc_state.p99_latency_ns);
 }
 
 static ssize_t active_channel_show(struct device_driver *driver, char *buf)
 {
+	(void)driver;
 	switch (active_channel) {
 	case CH_MSR:
 		return sysfs_emit(buf, "MSR\n");

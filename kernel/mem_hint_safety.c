@@ -7,6 +7,8 @@
 
 #include <linux/kernel.h>
 
+#include "mem_hint.h"
+
 /*
  * In real hardware this logic is immutable ASIC combinational logic, not
  * software. This file is the firmware-visible model of that hardware safety

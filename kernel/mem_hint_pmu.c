@@ -9,6 +9,9 @@
 #include <linux/jiffies.h>
 #include <linux/ktime.h>
 #include <linux/moduleparam.h>
+#include <linux/string.h>
+
+#include "mem_hint.h"
 
 struct pmu_sample {
 	u32 write_bw_gbps;
@@ -18,11 +21,11 @@ struct pmu_sample {
 	u32 dram_cmd_rate;
 };
 
-static unsigned int prefill_wr_thresh = 10;
-static unsigned int decode_wr_ceil = 1;
-static unsigned int decode_llc_floor = 5000;
-static unsigned int agentic_var_thresh = 50;
-static unsigned int idle_cmd_thresh = 1000;
+unsigned int prefill_wr_thresh = 10;
+unsigned int decode_wr_ceil = 1;
+unsigned int decode_llc_floor = 5000;
+unsigned int agentic_var_thresh = 50;
+unsigned int idle_cmd_thresh = 1000;
 static struct hrtimer pmu_poll_timer;
 
 module_param(prefill_wr_thresh, uint, 0644);

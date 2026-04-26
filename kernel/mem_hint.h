@@ -8,6 +8,10 @@
 #ifndef MEM_HINT_H
 #define MEM_HINT_H
 
+#include <linux/atomic.h>
+#include <linux/ktime.h>
+#include <linux/platform_device.h>
+#include <linux/sysfs.h>
 #include <linux/types.h>
 
 struct mem_workload_hint {
@@ -62,6 +66,29 @@ struct ecc_telemetry {
 	u64 read_retry_count;
 	u64 p99_latency_ns;
 };
+
+extern atomic_t current_phase_id;
+extern enum mem_hint_channel active_channel;
+extern struct jedec_limits platform_limits;
+extern struct ecc_telemetry ecc_state;
+extern ktime_t last_transition_time;
+extern u8 mem_hint_security_level;
+extern struct platform_driver mem_hint_platform_driver;
+extern const struct attribute_group *mem_hint_driver_groups[];
+
+extern u32 decode_trcd;
+extern u32 decode_vswing_mv;
+extern u32 decode_dfe_tap1;
+extern u32 prefill_vswing_mv;
+extern s32 prefill_ctle_gain_db;
+extern u32 agentic_priority;
+extern u32 idle_pll_reduction;
+extern u32 idle_vswing_mv;
+extern unsigned int prefill_wr_thresh;
+extern unsigned int decode_wr_ceil;
+extern unsigned int decode_llc_floor;
+extern unsigned int agentic_var_thresh;
+extern unsigned int idle_cmd_thresh;
 
 int mem_hint_apply(const struct mem_workload_hint *h);
 int mem_hint_pmu_init(void);

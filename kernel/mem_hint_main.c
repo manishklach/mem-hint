@@ -1,11 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0-only
- * mem_hint.c - Workload Hint Interface for AI Memory Systems
+ * mem_hint_main.c - Workload Hint Interface for AI Memory Systems
  * Patent Pending: Indian Patent Application No. 202641053160
  * Inventor: Manish KL, filed 26 April 2026
  * Reference implementation - MSR addresses are illustrative.
  */
 
-#include <linux/atomic.h>
 #include <linux/capability.h>
 #include <linux/device.h>
 #include <linux/fs.h>
@@ -14,7 +13,6 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
-#include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <asm/msr.h>
 
@@ -24,10 +22,9 @@
 #define MEM_HINT_DEVICE_NAME	"mem_hint"
 #define MEM_HINT_MMIO_OFFSET	0x100
 
-static atomic_t current_phase_id = ATOMIC_INIT(PHASE_IDLE);
-static enum mem_hint_channel active_channel = CH_MSR;
-static int active_channel_param = CH_MSR;
-static struct jedec_limits platform_limits = {
+atomic_t current_phase_id = ATOMIC_INIT(PHASE_IDLE);
+enum mem_hint_channel active_channel = CH_MSR;
+struct jedec_limits platform_limits = {
 	.min_tRCD = 14,
 	.max_tRCD = 32,
 	.min_tCL = 14,
@@ -37,24 +34,17 @@ static struct jedec_limits platform_limits = {
 	.min_vswing_mv = 200,
 	.max_vswing_mv = 400,
 };
-static struct ecc_telemetry ecc_state;
+struct ecc_telemetry ecc_state;
+ktime_t last_transition_time;
+u8 mem_hint_security_level;
+struct platform_driver mem_hint_platform_driver;
+
+static int active_channel_param = CH_MSR;
 static struct class *mem_hint_class;
 static struct device *mem_hint_dev;
 static struct platform_device *mem_hint_platform_dev;
 static void __iomem *mc_mmio_base;
-static ktime_t last_transition_time;
-static u8 mem_hint_security_level;
 static bool illustrative_hw_writes;
-
-extern const struct attribute_group *mem_hint_driver_groups[];
-extern u32 decode_trcd;
-extern u32 decode_vswing_mv;
-extern u32 decode_dfe_tap1;
-extern u32 prefill_vswing_mv;
-extern s32 prefill_ctle_gain_db;
-extern u32 agentic_priority;
-extern u32 idle_pll_reduction;
-extern u32 idle_vswing_mv;
 
 module_param_named(active_channel, active_channel_param, int, 0644);
 MODULE_PARM_DESC(active_channel,
@@ -67,8 +57,6 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Manish KL");
 MODULE_DESCRIPTION("AI workload hint interface - patent IN 202641053160");
 MODULE_VERSION("0.1.0");
-
-static struct platform_driver mem_hint_platform_driver;
 
 static u64 encode_hint(const struct mem_workload_hint *h)
 {
@@ -304,7 +292,7 @@ static int mem_hint_platform_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver mem_hint_platform_driver = {
+struct platform_driver mem_hint_platform_driver = {
 	.probe = mem_hint_platform_probe,
 	.remove = mem_hint_platform_remove,
 	.driver = {
@@ -321,6 +309,7 @@ static int __init mem_hint_init(void)
 	if (active_channel_param < CH_MSR || active_channel_param > CH_CXL_DVSEC)
 		active_channel_param = CH_MSR;
 	active_channel = active_channel_param;
+
 	ret = register_chrdev(MEM_HINT_MAJOR, MEM_HINT_DEVICE_NAME,
 			      &mem_hint_fops);
 	if (ret < 0)
@@ -367,6 +356,7 @@ static int __init mem_hint_init(void)
 		active_channel);
 	if (!illustrative_hw_writes)
 		pr_info("mem_hint: illustrative hardware writes are disabled by default\n");
+
 	return 0;
 
 err_sysfs:
@@ -398,7 +388,3 @@ static void __exit mem_hint_exit(void)
 
 module_init(mem_hint_init);
 module_exit(mem_hint_exit);
-
-#include "mem_hint_pmu.c"
-#include "mem_hint_sysfs.c"
-#include "mem_hint_safety.c"

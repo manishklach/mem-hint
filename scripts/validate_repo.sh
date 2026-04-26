@@ -15,7 +15,7 @@ required_files=(
   "CONTRIBUTING.md"
   ".github/workflows/build.yml"
   "kernel/Makefile"
-  "kernel/mem_hint.c"
+  "kernel/mem_hint_main.c"
   "kernel/mem_hint.h"
   "kernel/mem_hint_pmu.c"
   "kernel/mem_hint_sysfs.c"
@@ -38,7 +38,7 @@ done
 
 echo "[validate] checking patent notice in kernel sources"
 kernel_notice_files=(
-  "kernel/mem_hint.c"
+  "kernel/mem_hint_main.c"
   "kernel/mem_hint.h"
   "kernel/mem_hint_pmu.c"
   "kernel/mem_hint_sysfs.c"
@@ -52,6 +52,7 @@ for path in "${kernel_notice_files[@]}"; do
 done
 
 echo "[validate] python syntax"
+mkdir -p userspace/python/__pycache__ userspace/python/mem_hint/__pycache__
 python3 -m py_compile userspace/python/mem_hint/*.py userspace/python/mem_hint_cli.py
 
 echo "[validate] flake8"
@@ -64,8 +65,11 @@ fi
 echo "[validate] kernel build"
 kdir="${KDIR:-/lib/modules/$(uname -r)/build}"
 if [[ -d "$kdir" ]]; then
-  make -C kernel KDIR="$kdir" clean >/dev/null
-  make -C kernel KDIR="$kdir"
+  (
+    cd kernel
+    make KDIR="$kdir" clean >/dev/null
+    make KDIR="$kdir"
+  )
 else
   echo "warning: kernel headers unavailable at $kdir; skipping kernel build"
 fi
