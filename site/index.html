@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<!--
+  Patent Pending: Indian Patent Application No. 202641053160
+  Inventor: Manish KL, filed 26 April 2026
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <title>/dev/mem_hint - Workload-Aware Memory Hint Interface</title>
+    <meta
+      name="description"
+      content="Reference implementation of /dev/mem_hint, a workload-aware memory signaling hint interface for AI computing systems."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0d1117;
+        --panel: #131a22;
+        --panel-2: #1a232d;
+        --text: #eef2f6;
+        --muted: #98a7b8;
+        --accent: #f2b84b;
+        --line: rgba(242, 184, 75, 0.18);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Mono", monospace;
+        background:
+          radial-gradient(circle at top, rgba(242, 184, 75, 0.16), transparent 32%),
+          linear-gradient(180deg, #090d12 0%, var(--bg) 45%, #0a0f15 100%);
+        color: var(--text);
+        min-height: 100vh;
+      }
+
+      .shell {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 48px 20px 24px;
+      }
+
+      .hero {
+        padding: 48px 28px;
+        border: 1px solid var(--line);
+        background: rgba(19, 26, 34, 0.86);
+        border-radius: 22px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(242, 184, 75, 0.14);
+        color: var(--accent);
+        font-size: 0.82rem;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: clamp(2rem, 5vw, 4.4rem);
+        line-height: 1.02;
+      }
+
+      p.lead {
+        margin: 0;
+        color: var(--muted);
+        max-width: 720px;
+        line-height: 1.7;
+        font-size: 1rem;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 18px;
+        margin-top: 28px;
+      }
+
+      .card {
+        padding: 22px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(26, 35, 45, 0.95), rgba(13, 17, 23, 0.95));
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .card h2 {
+        margin: 0 0 10px;
+        font-size: 1.05rem;
+        color: var(--accent);
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.65;
+        font-size: 0.92rem;
+      }
+
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 26px;
+      }
+
+      a {
+        color: var(--text);
+      }
+
+      .links a {
+        text-decoration: none;
+        border: 1px solid var(--line);
+        background: rgba(242, 184, 75, 0.08);
+        padding: 12px 14px;
+        border-radius: 12px;
+      }
+
+      footer {
+        margin-top: 28px;
+        color: var(--muted);
+        font-size: 0.85rem;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div class="badge">Patent Pending IN 202641053160</div>
+        <h1>/dev/mem_hint</h1>
+        <p class="lead">
+          A software-defined, workload-aware memory signaling hint interface
+          for AI computing systems, modeled as a production-style Linux kernel
+          reference implementation.
+        </p>
+        <div class="cards">
+          <article class="card">
+            <h2>Predictive</h2>
+            <p>
+              Supports a `500 us` pre-adjustment concept ahead of phase
+              transitions so the control path can move before latency pain is
+              fully visible.
+            </p>
+          </article>
+          <article class="card">
+            <h2>Cross-layer</h2>
+            <p>
+              Connects runtime intent to kernel policy, firmware-visible
+              signaling, and PHY-facing behavior through one compact interface
+              contract.
+            </p>
+          </article>
+          <article class="card">
+            <h2>Safe</h2>
+            <p>
+              Keeps every workload request subordinate to an immutable hardware
+              safety limiter model with JEDEC and ECC-aware constraints.
+            </p>
+          </article>
+        </div>
+        <div class="links">
+          <a href="writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html">
+            Read the blog post
+          </a>
+          <a href="https://github.com/manishklach/mem-hint">GitHub repository</a>
+          <a href="https://github.com/manishklach/mem-hint/blob/main/PATENT_NOTICE.md">
+            Patent filing reference
+          </a>
+        </div>
+      </section>
+      <footer>
+        © 2026 Manish KL · Patent Pending IN 202641053160
+      </footer>
+    </main>
+  </body>
+</html>

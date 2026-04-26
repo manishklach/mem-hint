@@ -1,0 +1,30 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  kernel-and-python:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y linux-headers-generic build-essential python3-pip
+          python3 -m pip install --upgrade pip flake8
+
+      - name: Build kernel module
+        working-directory: kernel
+        run: make KDIR=/lib/modules/$(uname -r)/build
+
+      - name: Lint Python package
+        run: flake8 userspace/python

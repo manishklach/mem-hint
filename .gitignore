@@ -1,0 +1,12 @@
+*.ko
+*.o
+*.mod
+*.mod.c
+*.order
+*.symvers
+*.cmd
+*.tmp_versions/
+__pycache__/
+*.pyc
+.DS_Store
+*.egg-info/
