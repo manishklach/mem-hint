@@ -34,11 +34,18 @@ Modern AI systems keep solving compute problems while quietly drowning in memory
 ## Quick Start
 
 ```bash
-# Build and load the kernel module
-cd kernel && make && sudo insmod mem_hint.ko
-
 # Install Python library
 pip install -e userspace/python/
+
+# Run dry-run demo sequence
+python userspace/python/examples/demo_sequence.py
+```
+
+### Advanced: kernel module mode
+
+```bash
+# Build and load the kernel module
+cd kernel && make && sudo insmod mem_hint.ko
 
 # Send your first hint
 python3 -c "from mem_hint import MemHintClient; c = MemHintClient(); c.__enter__(); c.decode(latency_ns=90, priority=7); c.__exit__(None, None, None)"
@@ -119,7 +126,7 @@ make python-check
 
 The validation script checks required files, Python syntax, optional `flake8`, kernel buildability when local headers are available, and patent notice coverage in `kernel/*.c` and `kernel/*.h`.
 
-## Roadmap Before Public Release
+## Near-Term Roadmap
 
 - add diagrams and screenshots for the sysfs and CLI flow
 - verify GitHub Pages links and the blog-page integration
@@ -147,9 +154,9 @@ with MemHintClient(dry_run=True) as c:
 # Logs hint without opening /dev/mem_hint — safe on any Linux system
 ```
 
-### Projected Simulation Results
+### Projected / Simulated Results
 
-> **Disclaimer:** These numbers are illustrative simulation outputs, not measured on production memory-controller hardware. They represent projected outcomes from a DDR5-6400 reference platform model and are intended to show the *direction* of improvement, not validated benchmarks.
+These results are illustrative and derived from simulation models. They are not measured on production memory-controller hardware.
 
 | Metric | Baseline | With mem_hint | Projected Delta |
 |--------|----------|---------------|-----------------|
