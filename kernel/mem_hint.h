@@ -45,7 +45,7 @@ struct mem_workload_hint {
 	u16 bw_target_gbps;
 	u8  security_level;
 	u8  priority;
-	u8  reserved[2];
+	u8  reserved;
 } __packed;
 #else
 struct mem_workload_hint {
@@ -54,7 +54,7 @@ struct mem_workload_hint {
 	uint16_t bw_target_gbps;
 	uint8_t  security_level;
 	uint8_t  priority;
-	uint8_t  reserved[2];
+	uint8_t  reserved;
 } __attribute__((packed));
 #endif
 

@@ -16,9 +16,9 @@ from mem_hint.phases import (
 
 logger = logging.getLogger(__name__)
 
-HINT_FORMAT = "<BHHBB2s"
+HINT_FORMAT = "<BHHBBB"
 HINT_SIZE = struct.calcsize(HINT_FORMAT)
-assert HINT_SIZE == 9, f"Hint struct must be 9 bytes, got {HINT_SIZE}"
+assert HINT_SIZE == 8, f"Hint struct must be 8 bytes, got {HINT_SIZE}"
 SYSFS_BASE = "/sys/bus/platform/drivers/mem_hint"
 
 
@@ -73,7 +73,7 @@ class MemHintClient:
             bw_gbps & 0xFFFF,
             security & 0xFF,
             min(priority, 7) & 0xFF,
-            b"\x00\x00",
+            0,
         )
         if self.dry_run:
             logger.debug(

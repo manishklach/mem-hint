@@ -27,7 +27,7 @@ struct mem_workload_hint {
 	uint16_t bw_target_gbps;
 	uint8_t  security_level;
 	uint8_t  priority;
-	uint8_t  reserved[2];
+	uint8_t  reserved;
 } __attribute__((packed));
 
 /* Library API */
