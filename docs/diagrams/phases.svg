@@ -1,0 +1,30 @@
+<svg width="900" height="220" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .bg { fill:#0b0f14; }
+    .bar { fill:#121821; stroke:#ff9f1c; stroke-width:2; }
+    .text { fill:#e6edf3; font-family:monospace; font-size:14px; }
+  </style>
+
+  <rect class="bg" width="100%" height="100%"></rect>
+
+  <rect class="bar" x="50" y="80" width="200" height="40"></rect>
+  <text class="text" x="150" y="105" text-anchor="middle">Prefill</text>
+
+  <rect class="bar" x="260" y="80" width="140" height="40"></rect>
+  <text class="text" x="330" y="105" text-anchor="middle">Decode</text>
+
+  <rect class="bar" x="410" y="80" width="160" height="40"></rect>
+  <text class="text" x="490" y="105" text-anchor="middle">Agentic</text>
+
+  <rect class="bar" x="580" y="80" width="140" height="40"></rect>
+  <text class="text" x="650" y="105" text-anchor="middle">Decode</text>
+
+  <rect class="bar" x="730" y="80" width="100" height="40"></rect>
+  <text class="text" x="780" y="105" text-anchor="middle">Idle</text>
+
+  <text class="text" x="150" y="150" text-anchor="middle">High Bandwidth</text>
+  <text class="text" x="330" y="150" text-anchor="middle">Low Latency</text>
+  <text class="text" x="490" y="150" text-anchor="middle">Bursty</text>
+  <text class="text" x="650" y="150" text-anchor="middle">Low Latency</text>
+  <text class="text" x="780" y="150" text-anchor="middle">Power Save</text>
+</svg>

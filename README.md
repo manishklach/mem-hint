@@ -13,6 +13,8 @@ Modern AI systems keep solving compute problems while quietly drowning in memory
 For a full system-level walkthrough, design rationale, and architecture details, read the blog post:
 https://manishklach.github.io/writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html
 
+![Architecture](docs/diagrams/architecture.svg)
+
 ```text
 +-----------------------------------------------------------------------------------+
 | Layer 6: AI Runtime / Training Stack                                              |
@@ -79,6 +81,8 @@ The blog post covers:
 | Forward Pass | `0x05` | Training forward pass; same best-mode as prefill |
 | Backward Pass | `0x06` | Training backward pass; write-heavy optimization |
 
+![Phases](docs/diagrams/phases.svg)
+
 ## Deployment Modes
 
 Explicit hints are the most direct path: the runtime writes phase intent into `/dev/mem_hint`, the kernel validates it, clamps it, and emits an encoded signal over the selected privilege channel. This mode is best when the software stack already knows phase boundaries.
@@ -86,6 +90,14 @@ Explicit hints are the most direct path: the runtime writes phase intent into `/
 PMU auto-classification lets the kernel infer phase transitions every `100 us` from IMC and core PMU telemetry. It is useful when modifying the runtime is hard, or when an operator wants a baseline policy without touching application code.
 
 Sysfs policy tuning is the operator-facing control plane for field adaptation. Thresholds and per-phase policy defaults can be updated live while explicit hints and PMU classification continue using the same interface contract.
+
+![Control Flow](docs/diagrams/control-flow.svg)
+
+## Safety
+
+The architecture relies on a hardware safety limiter to clamp all hints against physical constraints (JEDEC limits, ECC feedback). 
+
+![Safety](docs/diagrams/safety.svg)
 
 ## Why This Matters Now
 

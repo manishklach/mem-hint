@@ -1,0 +1,32 @@
+<svg width="900" height="400" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .bg { fill:#0b0f14; }
+    .box { fill:#121821; stroke:#ff9f1c; stroke-width:2; rx:10; }
+    .text { fill:#e6edf3; font-family:monospace; font-size:14px; }
+    .arrow { stroke:#ff9f1c; stroke-width:2; marker-end:url(#arrow); }
+  </style>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#ff9f1c"></polygon>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="100%" height="100%"></rect>
+
+  <rect class="box" x="300" y="40" width="300" height="50"></rect>
+  <text class="text" x="450" y="70" text-anchor="middle">Proposed Config</text>
+
+  <rect class="box" x="300" y="120" width="300" height="50"></rect>
+  <text class="text" x="450" y="150" text-anchor="middle">Clamp to JEDEC limits</text>
+
+  <rect class="box" x="300" y="200" width="300" height="50"></rect>
+  <text class="text" x="450" y="230" text-anchor="middle">ECC Feedback Check</text>
+
+  <rect class="box" x="300" y="280" width="300" height="50"></rect>
+  <text class="text" x="450" y="310" text-anchor="middle">Safe Config Applied</text>
+
+  <line class="arrow" x1="450" y1="90" x2="450" y2="120"></line>
+  <line class="arrow" x1="450" y1="170" x2="450" y2="200"></line>
+  <line class="arrow" x1="450" y1="250" x2="450" y2="280"></line>
+</svg>
