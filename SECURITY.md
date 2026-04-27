@@ -20,7 +20,7 @@ This repository contains an **illustrative reference implementation** of `/dev/m
 
 If you discover a security vulnerability in this reference implementation, please report it responsibly by contacting:
 
-**Email:** mlachwani@gmail.com
+**Email:** manishklach@gmail.com
 
 Please include:
 - A description of the vulnerability

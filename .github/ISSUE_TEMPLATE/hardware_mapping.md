@@ -20,7 +20,7 @@ What worked, what didn't, what you discovered.
 ## Register Mapping Notes
 If you identified real MSR/MMIO/DVSEC register addresses, describe them here.
 
-> **Important:** Do not share NDA-protected register documentation in public issues. Contact mlachwani@gmail.com for private discussion of vendor-specific details.
+> **Important:** Do not share NDA-protected register documentation in public issues. Contact manishklach@gmail.com for private discussion of vendor-specific details.
 
 ## Relevance to Patent
 Which patent claims does this hardware experience relate to?
