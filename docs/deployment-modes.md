@@ -78,7 +78,7 @@ Verification is intentionally simple:
 2. Read `status/active_channel`.
 3. Check `last_transition_ms` while a workload is active.
 4. Observe whether `p99_latency_ns` and ECC counters are populated or at least
-   readable.
+readable.
 
 If explicit hints are wired correctly, `current_phase` should move in lockstep
 with runtime transitions. If PMU mode is active, phase changes should still
@@ -91,9 +91,9 @@ third. In other words:
 
 1. A privileged explicit hint is authoritative for the current phase.
 2. PMU classification provides a fallback or background signal when explicit
-   hints are absent.
+hints are absent.
 3. sysfs changes alter thresholds and policy parameters, but they do not
-   themselves claim the system entered a phase.
+themselves claim the system entered a phase.
 
 This ordering preserves semantic intent when it is available and still gives
 operators and unmodified systems a useful path when it is not.

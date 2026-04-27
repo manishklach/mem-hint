@@ -164,17 +164,17 @@ the semantic ABI.
 The control loop proceeds in a strict order:
 
 1. A phase hint arrives explicitly, or is inferred by PMU classification, or is
-   influenced by sysfs tuning.
+influenced by sysfs tuning.
 2. The kernel validates the source, clamps the hint fields into the interface
-   contract, and encodes the semantic packet.
+contract, and encodes the semantic packet.
 3. The policy engine maps the phase to a proposed timing, signaling, and
-   equalization profile.
+equalization profile.
 4. The safety limiter clamps the proposal against JEDEC and platform-specific
-   limits.
+limits.
 5. The selected privilege channel dispatches the encoded hint toward the target
-   hardware path.
+hardware path.
 6. ECC, retry, and latency telemetry flow back into the status path and
-   influence the next control decision.
+influence the next control decision.
 
 This feedback structure is what makes the repository more than a
 character-device demo. It shows how Claims 1, 4, 5, 6, 9, and 10 fit together as

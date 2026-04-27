@@ -13,9 +13,9 @@ hardware-validated prototypes and upstream integration.
 Deliverables:
 
 - Linux kernel module with 4 source files (mem_hint.c, mem_hint_pmu.c,
-  mem_hint_sysfs.c, mem_hint_safety.c)
+mem_hint_sysfs.c, mem_hint_safety.c)
 - 6-phase workload classification (Prefill, Decode, Agentic, Idle, ForwardPass,
-  BackwardPass)
+BackwardPass)
 - Safety limiter with 5-vector selftest and JEDEC/ECC/security enforcement
 - Python client library with dry_run mode for CI and development
 - Scheduler hook layer for vLLM, TensorRT-LLM, and PyTorch integration patterns
@@ -46,9 +46,9 @@ Validation plan:
 
 - Test on Intel Sapphire Rapids or Emerald Rapids server with DDR5
 - Measure classification accuracy against known workload traces (MLPerf
-  inference, training)
+inference, training)
 - Compare predicted phase transitions against actual workload state from runtime
-  hooks
+hooks
 
 Dependencies: Access to server-class hardware with uncore PMU support.
 
@@ -62,14 +62,13 @@ register on a real memory controller or PHY simulation model.
 Approach options:
 
 1. **Rambus PHY simulation model** — If access to Rambus DFE/CTLE register
-   simulation is available, map the `iowrite32()` path to a real register
-   window.
+simulation is available, map the `iowrite32()` path to a real register window.
 2. **Custom firmware on FPGA** — Implement a minimal memory controller state
-   machine on an FPGA development board (e.g., Xilinx Alveo) that accepts hint
-   writes and adjusts simulated timing parameters.
+machine on an FPGA development board (e.g., Xilinx Alveo) that accepts hint
+writes and adjusts simulated timing parameters.
 3. **Platform firmware collaboration** — Partner with a DRAM vendor or memory
-   controller IP provider to integrate the hint protocol into their firmware
-   development environment.
+controller IP provider to integrate the hint protocol into their firmware
+development environment.
 
 Key question: Which vendor firmware environment provides the most realistic
 validation path without requiring NDA-restricted register documentation?
@@ -86,13 +85,13 @@ Deliverables:
 - DVSEC capability layout for a vendor-specific control region
 - Per-HDM-region policy register definitions
 - Congestion response policy that adjusts remote region timing based on fabric
-  telemetry
+telemetry
 - NUMA IPI hint propagation for cross-socket phase coordination
 
 Validation plan:
 
 - Test on CXL-capable platform (e.g., Intel Sapphire Rapids with CXL Type-2
-  device)
+device)
 - Or simulate using QEMU CXL emulation with custom DVSEC extensions
 
 Dependencies: CXL hardware or emulation environment.
@@ -107,24 +106,24 @@ frameworks.
 Target integrations:
 
 - **vLLM** — Hook into the scheduler's prefill/decode state machine. The
-  `on_prefill_start()` and `on_decode_start()` hooks map directly to vLLM's
-  request lifecycle.
+`on_prefill_start()` and `on_decode_start()` hooks map directly to vLLM's
+request lifecycle.
 - **TensorRT-LLM** — Hook into the C++ execution context's phase transitions.
-  Requires a C-level integration rather than Python hooks.
+Requires a C-level integration rather than Python hooks.
 - **PyTorch FSDP** — Hook into the forward/backward pass boundaries via
-  `register_full_backward_hook()`. The `on_forward_pass()` and
-  `on_backward_pass()` hooks align with FSDP's shard-level execution.
+`register_full_backward_hook()`. The `on_forward_pass()` and
+`on_backward_pass()` hooks align with FSDP's shard-level execution.
 - **Megatron-LM** — Hook into pipeline parallelism stage transitions for
-  fine-grained phase control across pipeline stages.
+fine-grained phase control across pipeline stages.
 
 Acceptance criteria:
 
 - Integration must not add measurable latency to the critical path (< 1µs
-  overhead per phase transition)
+overhead per phase transition)
 - Integration must degrade gracefully when the kernel module is not loaded
-  (dry_run fallback)
+(dry_run fallback)
 - Integration must be configurable via environment variable (e.g.,
-  `MEM_HINT_ENABLED=1`)
+`MEM_HINT_ENABLED=1`)
 
 ## Phase 6: Hardware / FPGA Simulator
 
@@ -137,12 +136,12 @@ observable timing changes.
 Approach:
 
 1. Implement a minimal DDR5 PHY timing model on FPGA (focus on tRCD/tCL/tRP
-   response to hint writes)
+response to hint writes)
 2. Connect via PCIe BAR to the MMIO dispatch path
 3. Instrument timing measurements to validate that hint writes produce the
-   expected PHY configuration changes within the 500µs pre-adjustment window
+expected PHY configuration changes within the 500µs pre-adjustment window
 4. Publish measurement data as validation evidence for the patent's claimed
-   performance improvements
+performance improvements
 
 This phase would provide the first hardware-measured evidence of the
 architecture's effectiveness.

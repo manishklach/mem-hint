@@ -30,15 +30,15 @@ The reference classifier uses a narrow set of signals because the goal is not to
 be clever, it is to be explainable:
 
 - `UNC_M_CAS_COUNT.WR` from the IMC uncore represents sustained write pressure
-  and is the strongest Prefill cue.
+and is the strongest Prefill cue.
 - `UNC_M_CAS_COUNT.RD` from the IMC uncore represents sustained read pressure
-  and is the primary Decode cue when it dominates writes.
+and is the primary Decode cue when it dominates writes.
 - `MEM_LOAD_RETIRED.L3_MISS` from the core PMU distinguishes light read traffic
-  from true KV-cache miss pressure.
+from true KV-cache miss pressure.
 - `OFFCORE_REQUESTS` or an equivalent derived stream helps compute burst
-  variance for Agentic mode.
+variance for Agentic mode.
 - `UNC_M_CMD_RATE` from the IMC uncore provides the best simple signal for Idle
-  detection.
+detection.
 
 ## Why 100 Microseconds
 
@@ -58,7 +58,7 @@ but the design anticipates a sliding-window trend model layered on top:
 1. Retain the last ten PMU samples.
 2. Compute short-term directionality for reads, writes, misses, and variance.
 3. Detect whether the next 3–5 samples are converging toward a known phase
-   signature.
+signature.
 4. Trigger a pre-adjustment before the target phase is fully dominant.
 
 This trend model is the conceptual bridge between raw thresholding and

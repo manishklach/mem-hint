@@ -24,4 +24,4 @@ contract reviewable and buildable without overstating real hardware support.
 - The kernel module builds and the interface is coherent.
 - The repository is intentionally conservative about claiming hardware behavior.
 - The right way to read this project is as a reference control-plane proposal
-  with working software scaffolding, not as a device enablement package.
+with working software scaffolding, not as a device enablement package.

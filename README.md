@@ -1,16 +1,26 @@
-[![Build Status](https://github.com/manishklach/mem-hint/actions/workflows/build.yml/badge.svg)](https://github.com/manishklach/mem-hint/actions/workflows/build.yml)
+[![Build
+Status](https://github.com/manishklach/mem-hint/actions/workflows/build.yml/badge.svg)](https://github.com/manishklach/mem-hint/actions/workflows/build.yml)
 ![Patent Pending](https://img.shields.io/badge/Patent-Pending%20IN%20202641053160-orange)
 
 # /dev/mem_hint — Workload-Aware Memory Hint Interface
 
-A reference implementation of a software-defined, workload-aware memory signaling interface for AI computing systems.
+A reference implementation of a software-defined, workload-aware memory
+signaling interface for AI computing systems.
 
-Modern AI systems keep solving compute problems while quietly drowning in memory phase changes. Prefill wants throughput, decode wants latency, training swings between forward-read pressure and backward-write pressure, and none of that intent reaches the memory control plane in a structured way today.
+Modern AI systems keep solving compute problems while quietly drowning in memory
+phase changes. Prefill wants throughput, decode wants latency, training swings
+between forward-read pressure and backward-write pressure, and none of that
+intent reaches the memory control plane in a structured way today.
 
-`/dev/mem_hint` models a missing cross-layer contract: runtimes can signal workload phase, the kernel can classify phases automatically from PMU telemetry, policy can be tuned through sysfs, and an immutable safety model clamps all requests before they reach an illustrative hardware privilege channel. This repository is a clean reference implementation of that interface contract, not a claim of shipping silicon register definitions.
+`/dev/mem_hint` models a missing cross-layer contract: runtimes can signal
+workload phase, the kernel can classify phases automatically from PMU telemetry,
+policy can be tuned through sysfs, and an immutable safety model clamps all
+requests before they reach an illustrative hardware privilege channel. This
+repository is a clean reference implementation of that interface contract, not a
+claim of shipping silicon register definitions.
 
-📖 **Deep dive:**
-For a full system-level walkthrough, design rationale, and architecture details, read the blog post:
+📖 **Deep dive:** For a full system-level walkthrough, design rationale, and
+architecture details, read the blog post:
 https://manishklach.github.io/writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html
 
 ![Architecture](docs/diagrams/architecture.svg)
@@ -59,7 +69,8 @@ python3 -c "from mem_hint import MemHintClient; c = MemHintClient(); c.__enter__
 
 ## 📚 Design & Architecture Deep Dive
 
-This repository is a reference implementation of the ideas described in the full technical write-up:
+This repository is a reference implementation of the ideas described in the full
+technical write-up:
 
 https://manishklach.github.io/writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html
 
@@ -85,25 +96,42 @@ The blog post covers:
 
 ## Deployment Modes
 
-Explicit hints are the most direct path: the runtime writes phase intent into `/dev/mem_hint`, the kernel validates it, clamps it, and emits an encoded signal over the selected privilege channel. This mode is best when the software stack already knows phase boundaries.
+Explicit hints are the most direct path: the runtime writes phase intent into
+`/dev/mem_hint`, the kernel validates it, clamps it, and emits an encoded signal
+over the selected privilege channel. This mode is best when the software stack
+already knows phase boundaries.
 
-PMU auto-classification lets the kernel infer phase transitions every `100 us` from IMC and core PMU telemetry. It is useful when modifying the runtime is hard, or when an operator wants a baseline policy without touching application code.
+PMU auto-classification lets the kernel infer phase transitions every `100 us`
+from IMC and core PMU telemetry. It is useful when modifying the runtime is
+hard, or when an operator wants a baseline policy without touching application
+code.
 
-Sysfs policy tuning is the operator-facing control plane for field adaptation. Thresholds and per-phase policy defaults can be updated live while explicit hints and PMU classification continue using the same interface contract.
+Sysfs policy tuning is the operator-facing control plane for field adaptation.
+Thresholds and per-phase policy defaults can be updated live while explicit
+hints and PMU classification continue using the same interface contract.
 
 ![Control Flow](docs/diagrams/control-flow.svg)
 
 ## Safety
 
-The architecture relies on a hardware safety limiter to clamp all hints against physical constraints (JEDEC limits, ECC feedback). 
+The architecture relies on a hardware safety limiter to clamp all hints against
+physical constraints (JEDEC limits, ECC feedback).
 
 ![Safety](docs/diagrams/safety.svg)
 
 ## Why This Matters Now
 
-AI runtimes are increasingly memory-phase-sensitive while system software still treats memory behavior as mostly static. Long-context inference, decode-heavy serving, tool-augmented agent loops, and distributed training all place materially different demands on memory latency, bandwidth, and signaling margin. A narrow interface for phase intent is becoming easier to justify even when the underlying hardware hooks are not standardized yet.
+AI runtimes are increasingly memory-phase-sensitive while system software still
+treats memory behavior as mostly static. Long-context inference, decode-heavy
+serving, tool-augmented agent loops, and distributed training all place
+materially different demands on memory latency, bandwidth, and signaling margin.
+A narrow interface for phase intent is becoming easier to justify even when the
+underlying hardware hooks are not standardized yet.
 
-This repository is useful now because it makes that interface concrete. It gives kernel, runtime, firmware, and architecture teams something specific to review, test, critique, and refine instead of discussing the concept only at a whiteboard level.
+This repository is useful now because it makes that interface concrete. It gives
+kernel, runtime, firmware, and architecture teams something specific to review,
+test, critique, and refine instead of discussing the concept only at a
+whiteboard level.
 
 ## What Is Real Vs Illustrative
 
@@ -123,7 +151,9 @@ Illustrative in this repository:
 - PMU signal collection logic beyond a simulated classifier stub
 - the safety limiter as hardware enforcement rather than a software model
 
-This is a reference implementation, not real hardware programming. By default the kernel module suppresses illustrative privileged writes so a development machine does not touch undefined MSR or MMIO state.
+This is a reference implementation, not real hardware programming. By default
+the kernel module suppresses illustrative privileged writes so a development
+machine does not touch undefined MSR or MMIO state.
 
 ## Current Implementation Status
 
@@ -153,7 +183,9 @@ make userspace
 make python-check
 ```
 
-The validation script checks required files, Python syntax, optional `flake8`, kernel buildability when local headers are available, and patent notice coverage in `kernel/*.c` and `kernel/*.h`.
+The validation script checks required files, Python syntax, optional `flake8`,
+kernel buildability when local headers are available, and patent notice coverage
+in `kernel/*.c` and `kernel/*.h`.
 
 ## Near-Term Roadmap
 
@@ -185,7 +217,8 @@ with MemHintClient(dry_run=True) as c:
 
 ### Projected / Simulated Results
 
-These results are illustrative and derived from simulation models. They are not measured on production memory-controller hardware.
+These results are illustrative and derived from simulation models. They are not
+measured on production memory-controller hardware.
 
 | Metric | Baseline | With mem_hint | Projected Delta |
 |--------|----------|---------------|-----------------|
@@ -215,13 +248,20 @@ https://github.com/manishklach/mem-hint
 
 ## GitHub Pages
 
-The repository includes a static site under [`site/`](site/) and a dedicated `gh-pages` branch layout for publication. In GitHub repository Settings, set Pages to serve from the `gh-pages` branch and the root folder so the article is published at:
+The repository includes a static site under [`site/`](site/) and a dedicated
+`gh-pages` branch layout for publication. In GitHub repository Settings, set
+Pages to serve from the `gh-pages` branch and the root folder so the article is
+published at:
 
 `https://manishklach.github.io/writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html`
 
 ## Patent Notice
 
-This repository is associated with Indian Patent Application No. `202641053160`, filed by Manish KL on `26 April 2026`. It is published as a reference implementation for research, educational, and interoperability discussion purposes. See [PATENT_NOTICE.md](PATENT_NOTICE.md) for licensing and contact details.
+This repository is associated with Indian Patent Application No. `202641053160`,
+filed by Manish KL on `26 April 2026`. It is published as a reference
+implementation for research, educational, and interoperability discussion
+purposes. See [PATENT_NOTICE.md](PATENT_NOTICE.md) for licensing and contact
+details.
 
 ## Contributing
 
@@ -229,4 +269,6 @@ Contribution guidelines live in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-This repository uses a research-and-education-only custom license with an accompanying patent notice. See [LICENSE](LICENSE) and [PATENT_NOTICE.md](PATENT_NOTICE.md).
+This repository uses a research-and-education-only custom license with an
+accompanying patent notice. See [LICENSE](LICENSE) and
+[PATENT_NOTICE.md](PATENT_NOTICE.md).

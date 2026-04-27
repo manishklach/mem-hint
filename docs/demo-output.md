@@ -106,7 +106,7 @@ In a real deployment with the kernel module loaded:
 3. `phase_to_phy_config()` looks up the optimal PHY timing for the phase
 4. `safety_clamp()` enforces JEDEC SPD bounds, ECC feedback, and security floor
 5. The encoded hint is dispatched via the configured hardware channel
-   (MSR/MMIO/CXL)
+(MSR/MMIO/CXL)
 6. The memory controller adjusts timing within the 500µs pre-adjustment window
 7. sysfs status attributes are updated for observability
 

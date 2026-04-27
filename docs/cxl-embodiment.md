@@ -32,22 +32,22 @@ down." A sensible policy is more nuanced and takes into account the relative
 importance of each memory region to the current workload phase:
 
 1. Observe link utilization, queue occupancy, retries, and region pressure
-   across the fabric.
+across the fabric.
 2. If fabric congestion rises above 80% utilization on a given link, relax the
-   remote CXL region that is contributing least to user-visible latency. This
-   means widening timing margins and reducing signaling aggressiveness on the
-   congested link.
+remote CXL region that is contributing least to user-visible latency. This means
+widening timing margins and reducing signaling aggressiveness on the congested
+link.
 3. Simultaneously, preserve tighter local DDR5 or HBM timing behavior for the
-   decode-critical path, because local memory is not contributing to fabric
-   congestion and remains the primary latency-sensitive resource.
+decode-critical path, because local memory is not contributing to fabric
+congestion and remains the primary latency-sensitive resource.
 4. If congestion remains high despite relaxing one region, shift additional
-   traffic classes toward a safer or less latency-sensitive region. This may
-   involve moving cold KV cache pages to the relaxed CXL region while keeping
-   hot decode state local.
+traffic classes toward a safer or less latency-sensitive region. This may
+involve moving cold KV cache pages to the relaxed CXL region while keeping hot
+decode state local.
 5. Feed the congestion response result back into the next policy decision rather
-   than treating CXL as an opaque side channel. This closes the loop and ensures
-   that the policy engine learns from fabric conditions over time rather than
-   reacting purely from local telemetry.
+than treating CXL as an opaque side channel. This closes the loop and ensures
+that the policy engine learns from fabric conditions over time rather than
+reacting purely from local telemetry.
 
 That logic is what turns the fabric into part of the policy loop instead of a
 passive transport. The congestion response interacts with the safety limiter at
