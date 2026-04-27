@@ -138,6 +138,12 @@ Key paths:
 - `/sys/bus/platform/drivers/mem_hint/status/p99_latency_ns`
 - `/sys/bus/platform/drivers/mem_hint/status/active_channel`
 
+## GitHub Pages
+
+The repository includes a static site under [`site/`](site/) and a dedicated `gh-pages` branch layout for publication. In GitHub repository Settings, set Pages to serve from the `gh-pages` branch and the root folder so the article is published at:
+
+`https://manishklach.github.io/writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html`
+
 ## Patent Notice
 
 This repository is associated with Indian Patent Application No. `202641053160`, filed by Manish KL on `26 April 2026`. It is published as a reference implementation for research, educational, and interoperability discussion purposes. See [PATENT_NOTICE.md](PATENT_NOTICE.md) for licensing and contact details.
