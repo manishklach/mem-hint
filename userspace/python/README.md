@@ -1,26 +1,30 @@
-# mem-hint Python Package
+# mem-hint Python Client
 
-Patent Pending: Indian Patent Application No. 202641053160.
-
-This package exposes a thin Python interface for the illustrative `/dev/mem_hint` Linux kernel driver. It includes:
-
-- `MemHintClient` for direct device and sysfs interaction
-- `MemHintScheduler` for thread-safe runtime hooks
-- Example integrations for vLLM, TensorRT-LLM, and PyTorch-style training loops
+Python interface to the `/dev/mem_hint` kernel driver.
+Patent Pending: Indian Patent Application No. 202641053160
 
 ## Install
+    pip install -e .
 
-```bash
-pip install -e .
-```
+## Quick start
+    from mem_hint import MemHintClient, MemHintScheduler
 
-## Quick example
+    # Direct client
+    with MemHintClient() as c:
+        c.prefill(bw_gbps=400)
+        c.decode(latency_ns=90)
+        c.idle()
 
-```python
-from mem_hint import MemHintClient
+    # High-level scheduler
+    with MemHintScheduler() as s:
+        s.on_prefill_start(batch_size=32)
+        s.on_decode_start(request_id="req-001")
+        s.on_idle()
 
-with MemHintClient() as client:
-    client.prefill(bw_gbps=400, priority=7)
-    client.decode(latency_ns=90, priority=7)
-    print(client.get_current_phase())
-```
+    # Dry-run (no kernel module needed)
+    with MemHintClient(dry_run=True) as c:
+        c.decode()   # logs only, no /dev/mem_hint required
+
+## Phases
+    from mem_hint.phases import PHASES, PHASE_DECODE
+    print(PHASES[PHASE_DECODE])

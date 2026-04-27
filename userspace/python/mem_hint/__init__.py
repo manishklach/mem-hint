@@ -1,15 +1,15 @@
-# Patent Pending: Indian Patent Application No. 202641053160
-
-from .client import MemHintClient
-from .phases import PHASE_AGENTIC
-from .phases import PHASE_BACKWARD
-from .phases import PHASE_DECODE
-from .phases import PHASE_FORWARD
-from .phases import PHASE_IDLE
-from .phases import PHASE_PREFILL
-from .phases import PHASES
-from .phases import Phase
-from .scheduler import MemHintScheduler
+from mem_hint.client import MemHintClient
+from mem_hint.scheduler import MemHintScheduler
+from mem_hint.phases import (
+    Phase,
+    PHASES,
+    PHASE_PREFILL,
+    PHASE_DECODE,
+    PHASE_AGENTIC,
+    PHASE_IDLE,
+    PHASE_FORWARD,
+    PHASE_BACKWARD,
+)
 
 __all__ = [
     "MemHintClient",
@@ -23,3 +23,5 @@ __all__ = [
     "PHASE_FORWARD",
     "PHASE_BACKWARD",
 ]
+__version__ = "0.1.0"
+__author__ = "Manish KL"
