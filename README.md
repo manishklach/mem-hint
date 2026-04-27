@@ -207,7 +207,7 @@ These results are illustrative and derived from simulation models. They are not 
 
 ### Citing This Work
 
-```
+```text
 Manish KL. "/dev/mem_hint: A Kernel Control Plane for AI Memory
 Systems." Indian Patent Application No. 202641053160, 2026.
 https://github.com/manishklach/mem-hint

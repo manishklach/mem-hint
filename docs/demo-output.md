@@ -17,7 +17,7 @@ No kernel module or root privileges are needed. The demo runs entirely in
 
 ## Expected Output
 
-```
+```text
 07:00:00  ================================================================
 07:00:00  /dev/mem_hint — Phase Sequence Demo (dry_run)
 07:00:00  Patent Pending: IN 202641053160
@@ -87,7 +87,7 @@ No kernel module or root privileges are needed. The demo runs entirely in
 
 Each hint is an 8-byte packed struct sent via `write()` to `/dev/mem_hint`:
 
-```
+```text
 Offset  Size  Field               Example (DECODE)
 0       1     phase_id            0x02
 1       2     latency_target_ns   90 (0x005a LE)
