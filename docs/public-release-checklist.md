@@ -12,21 +12,24 @@ Patent Pending: Indian Patent Application No. 202641053160.
 ## Content and Accuracy
 
 - [ ] README simulation disclaimers reviewed — no overclaims about real hardware
-- [ ] "Projected Simulation Results" section clearly labeled as non-hardware-validated
+- [ ] "Projected Simulation Results" section clearly labeled as
+      non-hardware-validated
 - [ ] All register addresses clearly marked as illustrative
 - [ ] Kernel build messaging is honest about illustrative hardware paths
 - [ ] `MEM_HINT_REAL_HW` defaults to 0 (hardware writes disabled)
 
 ## Patent and Legal
 
-- [ ] Patent notice text and application metadata (202641053160) are correct everywhere
+- [ ] Patent notice text and application metadata (202641053160) are correct
+      everywhere
 - [ ] All kernel .c/.h files contain the patent notice header
 - [ ] License and research-use terms are reviewed
 - [ ] PATENT_NOTICE.md is up to date
 
 ## Security and Privacy
 
-- [ ] No private information, machine-local paths (like `~`), or secrets in tracked files
+- [ ] No private information, machine-local paths (like `~`), or secrets in
+      tracked files
 - [ ] `__pycache__`, `.egg-info`, and other generated artifacts are not tracked
 - [ ] SECURITY.md is present and accurate
 - [ ] Contact email in SECURITY.md is correct
@@ -53,5 +56,6 @@ Patent Pending: Indian Patent Application No. 202641053160.
 
 - [ ] Read through README as if seeing the repo for the first time
 - [ ] Click every link in README and verify it resolves
-- [ ] Run `demo_sequence.py` one more time and verify output matches docs/demo-output.md
+- [ ] Run `demo_sequence.py` one more time and verify output matches
+      docs/demo-output.md
 - [ ] Share with a trusted reviewer for feedback before wider distribution

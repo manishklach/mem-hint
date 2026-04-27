@@ -1,6 +1,8 @@
 # Demo Output
 
-This document shows the expected output from `userspace/python/examples/demo_sequence.py`, which demonstrates the `/dev/mem_hint` phase signaling interface in dry-run mode.
+This document shows the expected output from
+`userspace/python/examples/demo_sequence.py`, which demonstrates the
+`/dev/mem_hint` phase signaling interface in dry-run mode.
 
 ## Running the Demo
 
@@ -10,7 +12,8 @@ pip install -e . --quiet
 python examples/demo_sequence.py
 ```
 
-No kernel module or root privileges are needed. The demo runs entirely in `dry_run=True` mode.
+No kernel module or root privileges are needed. The demo runs entirely in
+`dry_run=True` mode.
 
 ## Expected Output
 
@@ -71,14 +74,14 @@ No kernel module or root privileges are needed. The demo runs entirely in `dry_r
 
 ## Phase Explanation
 
-| Phase | ID | What Happens | Memory Controller Response |
-|-------|----|--------------|----|
-| **PREFILL** | 0x01 | Prompt tokens ingested, KV cache filled | Max sustained BW mode: tRCD=22, vswing=300mV |
-| **DECODE** | 0x02 | Autoregressive token generation | Low-latency mode: tRCD=18, tCL=18, vswing=280mV |
-| **AGENTIC** | 0x03 | Tool calls, planning, bursty access | Balanced mode: tRCD=20, burst tolerance enabled |
-| **IDLE** | 0x04 | No active requests | Power-save: tRCD=24, PLL reduction, vswing=240mV |
-| **FORWARD** | 0x05 | Training forward pass | Same as Prefill — max sustained BW |
-| **BACKWARD** | 0x06 | Training backward pass (gradients) | Write-optimized: tRAS=38, high write throughput |
+| Phase        | ID   | What Happens                            | Memory Controller Response                       |
+| ------------ | ---- | --------------------------------------- | ------------------------------------------------ |
+| **PREFILL**  | 0x01 | Prompt tokens ingested, KV cache filled | Max sustained BW mode: tRCD=22, vswing=300mV     |
+| **DECODE**   | 0x02 | Autoregressive token generation         | Low-latency mode: tRCD=18, tCL=18, vswing=280mV  |
+| **AGENTIC**  | 0x03 | Tool calls, planning, bursty access     | Balanced mode: tRCD=20, burst tolerance enabled  |
+| **IDLE**     | 0x04 | No active requests                      | Power-save: tRCD=24, PLL reduction, vswing=240mV |
+| **FORWARD**  | 0x05 | Training forward pass                   | Same as Prefill — max sustained BW               |
+| **BACKWARD** | 0x06 | Training backward pass (gradients)      | Write-optimized: tRAS=38, high write throughput  |
 
 ## The 8-Byte Hint Structure
 
@@ -102,8 +105,10 @@ In a real deployment with the kernel module loaded:
 2. The kernel validates the phase ID (0x01–0x06) and clamps priority to [0,7]
 3. `phase_to_phy_config()` looks up the optimal PHY timing for the phase
 4. `safety_clamp()` enforces JEDEC SPD bounds, ECC feedback, and security floor
-5. The encoded hint is dispatched via the configured hardware channel (MSR/MMIO/CXL)
+5. The encoded hint is dispatched via the configured hardware channel
+   (MSR/MMIO/CXL)
 6. The memory controller adjusts timing within the 500µs pre-adjustment window
 7. sysfs status attributes are updated for observability
 
-The demo shows steps 1-3 in dry-run mode. Steps 4-7 require the kernel module and compatible hardware.
+The demo shows steps 1-3 in dry-run mode. Steps 4-7 require the kernel module
+and compatible hardware.
