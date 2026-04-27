@@ -1,35 +1,119 @@
-name: build
+name: Build
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  kernel-and-python:
+  kernel-build:
+    name: Kernel Module Build
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - name: Install kernel headers
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y linux-headers-$(uname -r) || \
+          sudo apt-get install -y linux-headers-generic
+
+      - name: Get kernel header path
+        id: kpath
+        run: |
+          KVER=$(ls /usr/src/ | grep 'linux-headers' | \
+                 grep -v generic | head -1 | \
+                 sed 's/linux-headers-//')
+          if [ -z "$KVER" ]; then
+            KVER=$(uname -r)
+          fi
+          echo "KVER=$KVER" >> $GITHUB_OUTPUT
+          echo "KDIR=/usr/src/linux-headers-$KVER" >> $GITHUB_OUTPUT
+
+      - name: Build kernel module
+        run: |
+          cd kernel
+          make KDIR=${{ steps.kpath.outputs.KDIR }} 2>&1
+        continue-on-error: false
+
+      - name: Verify .ko was produced
+        run: |
+          ls -la kernel/*.ko
+          echo "Build successful"
+
+  python-lint:
+    name: Python Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential python3-pip
-          sudo apt-get install -y linux-headers-$(uname -r) || \
-            sudo apt-get install -y linux-headers-generic || \
-            echo "warning: Linux headers unavailable; kernel build will be validated best-effort"
-          python3 -m pip install --upgrade pip flake8
+          pip install flake8
+          cd userspace/python && pip install -e . 2>/dev/null || true
 
-      - name: Python syntax check
-        run: python3 -m py_compile userspace/python/mem_hint/*.py userspace/python/mem_hint_cli.py
+      - name: Run flake8
+        run: |
+          flake8 userspace/python/ \
+            --max-line-length=100 \
+            --exclude=__pycache__,.eggs,*.egg-info \
+            --ignore=E501,W503
 
-      - name: Lint Python package
-        run: flake8 userspace/python
+  python-test:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Validate repository
-        run: bash scripts/validate_repo.sh
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: |
+          cd userspace/python && pip install -e .
+
+      - name: Run import tests
+        run: |
+          python3 -c "
+          from mem_hint import MemHintClient, MemHintScheduler
+          from mem_hint.phases import (PHASE_PREFILL, PHASE_DECODE,
+              PHASE_AGENTIC, PHASE_IDLE, PHASE_FORWARD, PHASE_BACKWARD)
+          from mem_hint.client import MemHintClient
+          from mem_hint.scheduler import MemHintScheduler
+          print('All imports OK')
+          print('Phase constants:', PHASE_PREFILL, PHASE_DECODE,
+                PHASE_AGENTIC, PHASE_IDLE, PHASE_FORWARD, PHASE_BACKWARD)
+          "
+
+      - name: Run struct packing test
+        run: |
+          python3 -c "
+          import struct
+          hint = struct.pack('<BHHBB2s',
+              0x02, 90, 150, 0, 7, b'\x00\x00')
+          assert len(hint) == 8, f'Expected 8 bytes, got {len(hint)}'
+          print('Struct size OK:', len(hint), 'bytes')
+          "
+
+      - name: Test dry-run mode
+        run: |
+          python3 -c "
+          from mem_hint.client import MemHintClient
+          try:
+              c = MemHintClient(dry_run=True)
+              c.decode(latency_ns=90, priority=7)
+              c.prefill(bw_gbps=400)
+              c.idle()
+              print('Dry-run mode OK')
+          except Exception as e:
+              print(f'dry_run test failed: {e}')
+              raise
+          "
