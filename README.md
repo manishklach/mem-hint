@@ -147,16 +147,18 @@ with MemHintClient(dry_run=True) as c:
 # Logs hint without opening /dev/mem_hint — safe on any Linux system
 ```
 
-### Performance Results
+### Projected Simulation Results
 
-| Metric | Baseline | With mem_hint | Delta |
-|--------|----------|---------------|-------|
+> **Disclaimer:** These numbers are illustrative simulation outputs, not measured on production memory-controller hardware. They represent projected outcomes from a DDR5-6400 reference platform model and are intended to show the *direction* of improvement, not validated benchmarks.
+
+| Metric | Baseline | With mem_hint | Projected Delta |
+|--------|----------|---------------|-----------------|
 | Decode P99 latency (LLaMA-3 70B) | ~112 ns | ~89 ns | −20% |
 | Prefill sustained BW | ~580 GB/s | ~618 GB/s | +6.5% |
 | Idle subsystem power | ~38 W | ~23 W | −39% |
 | Phase-transition overhead | ~2.1 ms | <0.1 ms | −95% |
 
-*Projected from simulation. DDR5-6400 reference platform.*
+*Projected from simulation model. No hardware validation has been performed.*
 
 ### Roadmap
 
