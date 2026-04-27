@@ -1,37 +1,46 @@
-# Safety Limiter
+# Hardware Safety Limiter
 
 Patent Pending: Indian Patent Application No. 202641053160.
 
-The safety limiter exists because workload-aware memory control is powerful enough to become dangerous if left unconstrained. The easiest analogy is Rowhammer-era thinking: if software can push memory timing or signaling in pursuit of performance without an immutable guardrail, it can create a reliability and security attack surface. Thermal abuse, signal-integrity margin erosion, and error-amplifying latency cuts all live in the same category.
+The safety limiter is the part of the architecture that turns a clever systems idea into a responsible one. The moment software can request more aggressive memory behavior, the memory subsystem becomes a potential attack surface. That risk is not theoretical. If timing and signaling margins are exposed without a hard guardrail, a malicious or simply careless workload could ask for settings that increase error rate, destabilize refresh behavior, or deliberately exploit marginal cells and links.
 
-The patent's claims 9 and 10 distinguish policy logic from enforcement logic. Policy may be software-visible and tunable. Enforcement is not. In a real system, the clamp would be immutable ASIC combinational logic in the memory-controller or PHY path. This repository models that hardware-visible behavior in software because the goal is to demonstrate interface semantics, not to claim that a kernel module should be trusted as the final safety boundary.
+The Rowhammer analogy is useful because it reminds us that software-visible activity and physical memory behavior are often more tightly coupled than architects expect. Rowhammer was not “a DRAM problem that software happened to trigger.” It was a cross-layer problem in which benign-seeming software access patterns created electrical consequences in memory. A workload-aware timing interface needs to assume the same class of coupling from day one.
 
-## Hardware vs. Firmware
+## Hardware Versus Firmware
 
-- Hardware safety logic is the non-bypassable authority.
-- Firmware or driver software proposes an operating point.
-- The clamp function applies JEDEC and telemetry bounds before anything reaches hardware.
-- Software cannot override the real hardware implementation.
+This distinction is the key architectural point. The firmware or kernel-visible model may contain a function called `safety_clamp()`, but that is not the ultimate source of truth. In a production system, the true limiter must live in immutable hardware logic. Software can propose. Hardware decides. The repository models the limiter in software because the goal is to make the interface reviewable and buildable, but the prose and code comments are intentionally explicit that this is a model of the enforcement plane, not the enforcement plane itself.
 
-That distinction matters because "cannot be bypassed at any privilege level" means even ring 0 code, SMM, or a hypervisor cannot force an out-of-bounds operating point if the hardware limiter is correctly implemented. The kernel module in this repository is only the firmware-visible model of that logic.
+## JEDEC JESD79-5 Compliance In Practice
 
-## JEDEC Compliance
+JESD79-5 matters because it defines the legal and characterized operating envelopes for DDR5 timing and signaling. In practice, compliance means that timing parameters such as `tRCD`, `tCL`, and `tRP` cannot be moved arbitrarily just because a phase table says they should. It also means that voltage swing and related electrical tuning live inside a bounded operating region derived from the memory technology, controller implementation, board layout, and validation data.
 
-The reference bounds mirror DDR5-6400 style limits:
+## SPD EEPROM Bounds
 
-- `tRCD`: `14..32`
-- `tCL`: `14..36`
-- `tRP`: `14..32`
-- `vswing_mv`: `200..400`
+The immediate source of those bounds is the SPD EEPROM and associated platform characterization. SPD provides the baseline timing envelope and module-specific characteristics that firmware reads during boot and initialization. A shipping safety limiter would consume those bounds early in platform bring-up and convert them into hardware-enforced clamp ranges. The reference implementation hardcodes representative DDR5 defaults because generic CI runners obviously do not expose real SPD state.
 
-In shipping hardware, these bounds would be read from SPD EEPROM at boot and then merged with board-specific SI characterization. The module hardcodes them as defaults because the repository is meant to be buildable on generic Linux CI runners.
+## ECC Feedback Integration
 
-## ECC Feedback in the Clamp
+The limiter does more than clamp static min and max values. It also listens to ECC and retry telemetry. If the correctable error rate rises above the configured threshold, the limiter relaxes aggressive parameters by stepping timing back toward a safer region. That is essential because a static safe range is only part of the story. A platform can remain nominally “within bounds” and still show that the selected operating point is unwise under current thermal, aging, or traffic conditions.
 
-The clamp integrates telemetry through `ecc.correctable_rate`. When the correctable error rate exceeds `1000000` per `10^8` accesses, the limiter relaxes `tRCD` and `tCL` by one step before allowing the request to proceed. That means the controller can back away from an aggressive setting without waiting for software to notice instability. This is the feedback-loop piece of the patent's reliability story.
+## Security-Hardened Mode
 
-## Security-hardened Mode
+When `security_level > 0`, the limiter deliberately holds selected timing values at or above a more conservative nominal floor. This is the software-visible manifestation of a security-aware operating mode. The repository treats that mode as a stronger safety posture for sensitive contexts. It does not try to imply that user space can simply assert “secure” and receive special handling. In a real deployment, that bit would only be meaningful when paired with a trust signal.
 
-When `security_level > 0`, the reference model raises `tRCD` and `tCL` to at least `22`, which is treated as a nominal-safe floor for the illustrative platform. The idea is that sensitive or attested contexts can request a more conservative operating point even if performance policy would have gone lower.
+## TEE Context Validation
 
-Claims 17 and 18 are reflected as a TEE validation stub in the driver: a real implementation would verify that the hint originated from an attested runtime or trusted execution environment before honoring elevated `security_level` semantics. The repository logs a warning because no TEE integration is present here.
+That trust signal is where TEE context validation comes in. The patent’s security-oriented claims contemplate a system in which sensitive contexts can request a hardened policy only when they are backed by attestation, trusted runtime state, or equivalent evidence. The reference driver leaves this as an explicit stub because there is no honest way to fake a TEE integration in a generic reference repository. The correct behavior is to acknowledge the requirement and keep the hook visible.
+
+## Claim 9 And Claim 10 In Plain Language
+
+Claim 9, in plain language, is the statement that workload-aware policy must still be subordinate to a hardware-enforced safe operating range. Claim 10 extends that logic by making the limiter authoritative regardless of software privilege. These claims matter because they prevent the interface from collapsing into “kernel code that can overclock DRAM.” The invention is a disciplined control plane, not a bypass.
+
+## Why “Cannot Be Bypassed At Any Privilege Level” Matters
+
+That phrase is meaningful because it shifts the trust boundary out of the OS. If ring 0, a hypervisor, or firmware can bypass the limiter, then the limiter is not a safety mechanism. It is only a convention. The architecture described here treats non-bypassability as a defining requirement: the kernel may participate in the model, but it must not be the final authority.
+
+## See Also
+
+- [Architecture Overview](architecture.md)
+- [Hardware Channels](hardware-channels.md)
+- [CXL Fabric Embodiment](cxl-embodiment.md)
+- [Deployment Modes](deployment-modes.md)
