@@ -9,6 +9,7 @@
 #include <linux/hrtimer.h>
 #include <linux/ktime.h>
 #include <linux/module.h>
+#include <linux/version.h>
 
 #include "mem_hint.h"
 
@@ -157,8 +158,13 @@ static enum hrtimer_restart pmu_timer_callback(struct hrtimer *t)
 
 int mem_hint_pmu_init(void)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 17, 0)
+	hrtimer_setup(&pmu_timer, pmu_timer_callback,
+		      CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+#else
 	hrtimer_init(&pmu_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	pmu_timer.function = pmu_timer_callback;
+#endif
 	hrtimer_start(&pmu_timer, ms_to_ktime(100), HRTIMER_MODE_REL);
 	pr_info("mem_hint: PMU classifier started (100ms polling)\n");
 	return 0;
