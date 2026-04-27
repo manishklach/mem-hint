@@ -9,6 +9,10 @@ Modern AI systems keep solving compute problems while quietly drowning in memory
 
 `/dev/mem_hint` models a missing cross-layer contract: runtimes can signal workload phase, the kernel can classify phases automatically from PMU telemetry, policy can be tuned through sysfs, and an immutable safety model clamps all requests before they reach an illustrative hardware privilege channel. This repository is a clean reference implementation of that interface contract, not a claim of shipping silicon register definitions.
 
+📖 **Deep dive:**
+For a full system-level walkthrough, design rationale, and architecture details, read the blog post:
+https://manishklach.github.io/writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html
+
 ```text
 +-----------------------------------------------------------------------------------+
 | Layer 6: AI Runtime / Training Stack                                              |
@@ -50,6 +54,19 @@ cd kernel && make && sudo insmod mem_hint.ko
 # Send your first hint
 python3 -c "from mem_hint import MemHintClient; c = MemHintClient(); c.__enter__(); c.decode(latency_ns=90, priority=7); c.__exit__(None, None, None)"
 ```
+
+## 📚 Design & Architecture Deep Dive
+
+This repository is a reference implementation of the ideas described in the full technical write-up:
+
+https://manishklach.github.io/writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html
+
+The blog post covers:
+- **The AI Memory Wall:** Why LLM serving, agentic loops, and MoE routing uniquely stress legacy memory controllers
+- **Interface Design:** The architectural tension between software workload intent and hardware safety limits
+- **Control Plane Layers:** How the 6-layer stack bridges userspace PyTorch/vLLM to physical DDR5 PHY timings
+- **Threat Model & Safety:** Why the immutable hardware safety clamp is critical for system stability
+- **Simulation Validation:** Performance projections showing 20% latency reduction and 39% idle power savings
 
 ## Phase Reference
 

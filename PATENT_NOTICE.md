@@ -19,3 +19,7 @@ This repository contains a reference implementation of technology described in t
 Contact: [manishklach@gmail.com](mailto:manishklach@gmail.com)
 
 Blog post reference: [https://manishklach.github.io/writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html](https://manishklach.github.io/writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html)
+
+## Related Technical Write-up
+
+https://manishklach.github.io/writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html
