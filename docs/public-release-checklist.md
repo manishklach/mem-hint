@@ -26,7 +26,7 @@ Patent Pending: Indian Patent Application No. 202641053160.
 
 ## Security and Privacy
 
-- [ ] No private information, machine-local paths (`/home/`, `/Users/`), or secrets in tracked files
+- [ ] No private information, machine-local paths (like `~`), or secrets in tracked files
 - [ ] `__pycache__`, `.egg-info`, and other generated artifacts are not tracked
 - [ ] SECURITY.md is present and accurate
 - [ ] Contact email in SECURITY.md is correct
