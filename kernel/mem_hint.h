@@ -108,6 +108,6 @@ void safety_limiter_selftest(void);
 extern atomic_t           current_phase_id;
 extern struct ecc_telemetry ecc_state;
 extern struct jedec_limits  platform_limits;
-extern enum mem_hint_channel active_channel;
+extern int              active_channel;
 
 #endif /* MEM_HINT_H */

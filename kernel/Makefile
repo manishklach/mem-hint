@@ -1,6 +1,7 @@
 obj-m += mem_hint_mod.o
 mem_hint_mod-objs := mem_hint.o mem_hint_pmu.o \
                      mem_hint_sysfs.o mem_hint_safety.o
+ccflags-y += -Wno-error
 
 KDIR ?= /lib/modules/$(shell uname -r)/build
 PWD  := $(shell pwd)

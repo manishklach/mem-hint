@@ -28,11 +28,20 @@ struct jedec_limits  platform_limits = {
 	.min_tRP  = 14, .max_tRP  = 32,
 	.min_vswing_mv = 200, .max_vswing_mv = 400,
 };
-enum mem_hint_channel active_channel = CH_MSR;
+int active_channel = CH_MSR;
 static struct class          *mem_hint_class;
 static struct device         *mem_hint_dev;
 static struct platform_device *mem_hint_pdev;
 static void __iomem *mc_mmio_base __maybe_unused = NULL;
+
+/*
+ * MEM_HINT_REAL_HW: set to 1 only on platforms with a real
+ * implementation behind MEM_HINT_MSR.  Left at 0 for CI and
+ * reference builds to avoid GP-faulting on undefined MSRs.
+ */
+#ifndef MEM_HINT_REAL_HW
+#define MEM_HINT_REAL_HW 0
+#endif
 
 module_param(active_channel, int, 0644);
 MODULE_PARM_DESC(active_channel,
@@ -161,7 +170,11 @@ void mem_hint_apply(const struct mem_workload_hint *h)
 
 	switch (active_channel) {
 	case CH_MSR:
+#if MEM_HINT_REAL_HW
 		wrmsrl(MEM_HINT_MSR, encoded_val);
+#else
+		pr_debug("mem_hint: MSR write suppressed (illustrative)\n");
+#endif
 		break;
 	case CH_MMIO:
 		if (mc_mmio_base)
@@ -179,10 +192,10 @@ void mem_hint_apply(const struct mem_workload_hint *h)
 
 	atomic_set(&current_phase_id, h->phase_id);
 
-	pr_debug("mem_hint: applied phase=%u tRCD=%u tCL=%u tRP=%u "
-		 "tRAS=%u vswing=%u\n",
-		 h->phase_id, clamped.tRCD, clamped.tCL,
-		 clamped.tRP, clamped.tRAS, clamped.vswing_mv);
+	pr_info("mem_hint: phase=%u tRCD=%u tCL=%u tRP=%u "
+		"tRAS=%u vswing=%u\n",
+		h->phase_id, clamped.tRCD, clamped.tCL,
+		clamped.tRP, clamped.tRAS, clamped.vswing_mv);
 }
 
 /* ── File operations ───────────────────────────────────────────── */
