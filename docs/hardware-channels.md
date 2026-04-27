@@ -29,10 +29,18 @@ The CXL DVSEC embodiment matters because modern memory systems are no longer str
 The essential compression step packs the software-facing structure into a single 64-bit word:
 
 ```text
-Bit  63        56 55      48 47    40 39      24 23       8 7     0
-┌──────────┬──────────┬────────┬──────────┬──────────┬───────┐
-│ reserved │ priority │security│    bw    │ latency  │phase  │
-└──────────┴──────────┴────────┴──────────┴──────────┴───────┘
+  63        56 55        48 47        40 39              24 23               8 7          0
+  ┌──────────┬───────────┬────────────┬──────────────────┬──────────────────┬────────────┐
+  │ reserved │ priority  │ security   │ bw_target_gbps   │ latency_target_ns│ phase_id   │
+  │  8 bits  │  8 bits   │  8 bits    │     16 bits      │     16 bits      │  8 bits    │
+  └──────────┴───────────┴────────────┴──────────────────┴──────────────────┴────────────┘
+
+bits [7:0]    phase_id
+bits [23:8]   latency_target_ns
+bits [39:24]  bw_target_gbps
+bits [47:40]  security_level
+bits [55:48]  priority
+bits [63:56]  reserved
 ```
 
 The phase_id occupies the lowest byte for quick extraction in hardware decode logic. Latency and bandwidth targets occupy 16-bit fields that are wide enough for practical value ranges. Security level and priority each consume one byte. The reserved field at the top allows future extensions without changing the lower-field layout. This packing means the entire semantic content of a workload hint can travel through any privileged conduit, whether MSR, MMIO, or CXL DVSEC, as a single atomic value that hardware can latch in one cycle.
