@@ -5,212 +5,1485 @@
 -->
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1"
-    />
-    <title>/dev/mem_hint: A Kernel Control Plane for AI Memory Systems</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>/dev/mem_hint — A Kernel Control Plane for AI Memory Systems · Manish KL</title>
     <meta
       name="description"
-      content="A systems-oriented essay on /dev/mem_hint, a workload-aware kernel control plane for AI memory systems."
-    />
-    <meta
-      name="keywords"
-      content="mem_hint, Linux kernel, AI systems, memory controller, DDR5, CXL, PMU"
-    />
+      content="A deep technical primer on /dev/mem_hint: the kernel-mediated hint interface connecting AI runtimes, PMU classifiers, MSR/MMIO/CXL paths, and memory PHY policy engines. Patent Pending IN 202641053160.">
+    <meta name="author" content="Manish KL">
     <link
       rel="canonical"
-      href="https://manishklach.github.io/writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html"
-    />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+      href="https://manishklach.github.io/writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet">
     <style>
       :root {
-        --bg: #0d1117;
-        --panel: #131a22;
-        --text: #edf2f7;
-        --muted: #9ca9b5;
-        --accent: #f2b84b;
-        --rule: rgba(242, 184, 75, 0.2);
+        --bg: #05080f;
+        --bg-2: #09101b;
+        --panel: rgba(10, 16, 28, 0.92);
+        --panel-soft: rgba(9, 14, 24, 0.82);
+        --text: #d8e8f8;
+        --muted: #8ea5bd;
+        --line: rgba(131, 169, 214, 0.18);
+        --amber: #e8a830;
+        --blue: #67b8ff;
+        --pink: #f187c8;
+        --green: #7ed4a8;
+        --cyan: #6dd6e7;
+        --red: #ff7f90;
+        --yellow: #f2d56b;
+        --shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
       }
 
       body {
         margin: 0;
-        background:
-          radial-gradient(circle at top, rgba(242, 184, 75, 0.16), transparent 32%),
-          linear-gradient(180deg, #090d12 0%, var(--bg) 50%, #090d12 100%);
         color: var(--text);
+        background:
+          radial-gradient(circle at top, rgba(232, 168, 48, 0.09), transparent 22%),
+          linear-gradient(180deg, #03060d 0%, var(--bg) 42%, #04070d 100%);
+        font-family: "IBM Plex Sans", sans-serif;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.15;
+        background:
+          repeating-linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.05) 0,
+            rgba(255, 255, 255, 0.05) 1px,
+            transparent 1px,
+            transparent 4px
+          );
+        mix-blend-mode: soft-light;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .shell {
+        width: min(1200px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      .mono,
+      code,
+      pre,
+      .stat-value,
+      .nav-brand,
+      .nav-links,
+      .pill,
+      .phase-id,
+      .kbd {
         font-family: "IBM Plex Mono", monospace;
       }
 
-      article {
-        max-width: 860px;
-        margin: 0 auto;
-        padding: 48px 20px 80px;
+      .site-nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(16px);
+        background: rgba(5, 8, 15, 0.84);
+        border-bottom: 1px solid rgba(232, 168, 48, 0.12);
+      }
+
+      .site-nav .shell {
+        display: grid;
+        grid-template-columns: 220px 1fr 280px;
+        align-items: center;
+        gap: 20px;
+        padding: 16px 0;
+      }
+
+      .nav-brand {
+        color: var(--amber);
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-decoration: none;
+      }
+
+      .nav-links {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 14px;
+        font-size: 0.87rem;
+      }
+
+      .nav-links a {
+        text-decoration: none;
+        color: var(--muted);
+      }
+
+      .nav-links a:hover,
+      .nav-links a:focus {
+        color: var(--text);
+      }
+
+      .pill {
+        justify-self: end;
+        border: 1px solid rgba(232, 168, 48, 0.26);
+        color: var(--amber);
+        border-radius: 999px;
+        padding: 8px 12px;
+        background: rgba(232, 168, 48, 0.08);
+        font-size: 0.78rem;
+        white-space: nowrap;
+      }
+
+      header.hero {
+        padding: 48px 0 40px;
       }
 
       .eyebrow {
-        color: var(--accent);
-        font-size: 0.84rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--amber);
+        font: 500 0.88rem/1.2 "IBM Plex Mono", monospace;
+        letter-spacing: 0.03em;
+        margin-bottom: 24px;
+      }
+
+      .cursor {
+        display: inline-block;
+        color: var(--cyan);
+        animation: blink 1s step-end infinite;
+      }
+
+      @keyframes blink {
+        0%, 46% {
+          opacity: 1;
+        }
+        47%, 100% {
+          opacity: 0;
+        }
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: 1.25fr 0.9fr;
+        gap: 28px;
+        align-items: end;
       }
 
       h1 {
-        font-size: clamp(2rem, 5vw, 3.8rem);
-        line-height: 1.05;
-        margin: 10px 0 18px;
+        margin: 0 0 18px;
+        font: 700 clamp(2.5rem, 5vw, 5rem)/0.92 "IBM Plex Mono", monospace;
+        letter-spacing: -0.05em;
+      }
+
+      .hero p.deck {
+        margin: 0;
+        max-width: 720px;
+        font-size: 1.08rem;
+        line-height: 1.8;
+        color: var(--muted);
+      }
+
+      .stat-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-top: 30px;
+      }
+
+      .stat {
+        background: var(--panel-soft);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 18px 18px 16px;
+        box-shadow: var(--shadow);
+      }
+
+      .stat-value {
+        font-size: 1.6rem;
+        color: var(--amber);
+        margin-bottom: 8px;
+      }
+
+      .stat-label {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      main {
+        padding-bottom: 80px;
+      }
+
+      section {
+        margin-top: 46px;
+        scroll-margin-top: 88px;
+      }
+
+      .panel,
+      .table-shell,
+      .svg-shell,
+      .code-shell,
+      .grid-card,
+      .side-tree,
+      .callout,
+      .phase-card,
+      .stat,
+      .closing-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        box-shadow: var(--shadow);
+      }
+
+      .panel,
+      .svg-shell,
+      .table-shell,
+      .callout,
+      .closing-card {
+        padding: 22px 24px;
       }
 
       h2 {
-        margin-top: 42px;
-        color: var(--accent);
+        margin: 0 0 16px;
+        font: 700 clamp(1.7rem, 2.2vw, 2.4rem)/1.08 "IBM Plex Mono", monospace;
+        letter-spacing: -0.03em;
       }
 
-      p,
-      li {
+      h3 {
+        margin: 0 0 12px;
+        font: 700 1.1rem/1.2 "IBM Plex Mono", monospace;
+      }
+
+      p {
+        margin: 0 0 16px;
         color: var(--muted);
         line-height: 1.8;
       }
 
-      .panel,
-      pre {
-        background: rgba(19, 26, 34, 0.92);
-        border: 1px solid var(--rule);
-        border-radius: 18px;
+      .section-kicker {
+        font: 600 0.85rem/1 "IBM Plex Mono", monospace;
+        color: var(--cyan);
+        margin-bottom: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
       }
 
-      .panel {
-        padding: 20px 22px;
+      .two-col {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 24px;
+      }
+
+      .three-col {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 12px 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--text);
+        font-family: "IBM Plex Mono", monospace;
+        font-weight: 600;
+        font-size: 0.86rem;
+      }
+
+      td {
+        color: var(--muted);
+      }
+
+      .table-shell table tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .callout {
+        margin-top: 16px;
+      }
+
+      .callout.amber {
+        border-color: rgba(232, 168, 48, 0.24);
+      }
+
+      .callout.green {
+        border-color: rgba(126, 212, 168, 0.24);
+      }
+
+      .callout.red {
+        border-color: rgba(255, 127, 144, 0.24);
+      }
+
+      .callout .title {
+        font: 700 0.82rem/1 "IBM Plex Mono", monospace;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .callout.amber .title { color: var(--amber); }
+      .callout.green .title { color: var(--green); }
+      .callout.red .title { color: var(--red); }
+
+      .svg-shell svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .code-grid {
+        display: grid;
+        gap: 18px;
+      }
+
+      .code-shell {
+        position: relative;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      .code-shell .lang {
+        position: absolute;
+        top: 12px;
+        right: 14px;
+        color: var(--amber);
+        font: 600 0.74rem/1 "IBM Plex Mono", monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
       }
 
       pre {
-        padding: 18px;
+        margin: 0;
+        padding: 26px 22px 22px;
         overflow: auto;
+        background: #030610;
+        border-left: 4px solid var(--amber);
       }
 
       code {
-        color: var(--text);
+        font-size: 0.9rem;
+        line-height: 1.75;
+        white-space: pre;
+        display: block;
       }
 
-      a {
-        color: var(--accent);
+      .kw { color: var(--pink); }
+      .ty { color: var(--green); }
+      .st { color: var(--yellow); }
+      .nu { color: var(--amber); }
+      .cm { color: #7f8ea3; font-style: italic; }
+      .fn { color: var(--blue); }
+      .op { color: var(--cyan); }
+
+      .phase-rail {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .phase-card {
+        padding: 18px;
+      }
+
+      .phase-id {
+        display: inline-block;
+        color: var(--amber);
+        border: 1px solid rgba(232, 168, 48, 0.28);
+        border-radius: 999px;
+        padding: 5px 10px;
+        font-size: 0.75rem;
+        margin-bottom: 12px;
+      }
+
+      .phase-card h4 {
+        margin: 0 0 8px;
+        font: 700 1rem/1.2 "IBM Plex Mono", monospace;
+      }
+
+      .phase-meta {
+        margin-top: 12px;
+        display: grid;
+        gap: 6px;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+
+      .flow-bar {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .flow-step {
+        padding: 14px 12px;
+        border-radius: 16px;
+        text-align: center;
+        background: rgba(103, 184, 255, 0.08);
+        border: 1px solid rgba(103, 184, 255, 0.14);
+        font: 600 0.82rem/1.4 "IBM Plex Mono", monospace;
+        color: var(--blue);
+      }
+
+      .mode-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .grid-card {
+        padding: 18px;
+      }
+
+      .grid-card .tag {
+        font: 700 0.75rem/1 "IBM Plex Mono", monospace;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+
+      .grid-card.green .tag { color: var(--green); }
+      .grid-card.amber .tag { color: var(--amber); }
+      .grid-card.blue .tag { color: var(--blue); }
+
+      .side-tree {
+        padding: 22px;
+      }
+
+      .mono-list {
+        font: 500 0.9rem/1.75 "IBM Plex Mono", monospace;
+        color: var(--muted);
+        white-space: pre-wrap;
+      }
+
+      .conduit-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+      }
+
+      .conduit-grid .grid-card {
+        min-height: 180px;
+      }
+
+      .comparison td:first-child {
+        color: var(--red);
+      }
+
+      .comparison td:last-child {
+        color: var(--green);
+      }
+
+      .closing-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 24px;
+      }
+
+      .closing-card .big {
+        font: 700 2rem/1 "IBM Plex Mono", monospace;
+        color: var(--amber);
+        margin-bottom: 14px;
+      }
+
+      .footer {
+        border-top: 1px solid rgba(232, 168, 48, 0.12);
+        padding: 20px 0 30px;
+        color: var(--muted);
+      }
+
+      .footer .shell {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        font: 500 0.85rem/1.4 "IBM Plex Mono", monospace;
+      }
+
+      @media (max-width: 1080px) {
+        .site-nav .shell,
+        .hero-grid,
+        .two-col,
+        .closing-grid,
+        .three-col,
+        .phase-rail,
+        .mode-grid,
+        .conduit-grid,
+        .stat-row {
+          grid-template-columns: 1fr;
+        }
+
+        .pill {
+          justify-self: start;
+        }
+
+        .nav-links {
+          justify-content: flex-start;
+        }
+
+        .flow-bar {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
   <body>
-    <article>
-      <div class="eyebrow">Patent Pending IN 202641053160</div>
-      <h1>/dev/mem_hint: A Kernel Control Plane for AI Memory Systems</h1>
-      <div class="panel">
-        <p>
-          This repository copy preserves the requested site slot for the
-          `/dev/mem_hint` article. The exact original blog post body was not
-          available in the provided workspace, so this page presents a polished
-          reference essay aligned to the same subject, title, and visual style
-          while the canonical URL remains reserved for the authoritative post.
-        </p>
+    <nav class="site-nav">
+      <div class="shell">
+        <a class="nav-brand" href="../index.html">/dev/mem_hint</a>
+        <div class="nav-links">
+          <a href="#problem">Problem</a>
+          <a href="#hint-struct">Hint struct</a>
+          <a href="#kernel-driver">Kernel driver</a>
+          <a href="#pmu-path">PMU path</a>
+          <a href="#sysfs">sysfs</a>
+          <a href="#hardware">Hardware</a>
+          <a href="#safety">Safety</a>
+        </div>
+        <div class="pill">Patent Pending · IN 202641053160</div>
       </div>
+    </nav>
 
-      <h2>The Missing Contract</h2>
-      <p>
-        AI systems have become deeply phase-structured while the memory control
-        plane remains largely phase-blind. Prefill pushes bandwidth. Decode
-        punishes latency. Agentic execution injects bursty, variance-heavy
-        traffic. Training oscillates between forward-read pressure and
-        backward-write pressure. We have rich software semantics above the
-        kernel and highly tuned signaling machinery below it, but almost no
-        narrow interface joining the two.
-      </p>
-      <p>
-        `/dev/mem_hint` is the shape of that missing contract. It is small on
-        purpose: an eight-byte hint packet, a kernel policy engine, a safety
-        limiter that software cannot outrank, and a set of illustrative
-        transport paths into a memory controller or CXL-attached device.
-      </p>
+    <header class="hero shell">
+      <div class="eyebrow"><span class="cursor">&gt;</span> Deep Technical Primer · Manish KL · 26 April 2026</div>
+      <div class="hero-grid">
+        <div>
+          <h1>/dev/mem_hint<br>A kernel control plane<br>for AI memory systems.</h1>
+          <p class="deck">
+            AI runtimes already know when they are entering prefill, decode, agentic execution, idle gaps,
+            forward propagation, and gradient-heavy backward phases. Memory hardware does not. It sees
+            transactions, queue pressure, retries, and late symptoms. <span class="mono">/dev/mem_hint</span> is the
+            missing control-plane contract: one compact hint structure that lets software express workload intent
+            while leaving timing, electrical, and equalization enforcement to a privileged policy engine and a
+            non-bypassable safety layer.
+          </p>
+        </div>
+        <div class="panel">
+          <p>
+            This reference implementation demonstrates how explicit runtime hints, PMU classification, and
+            operator policy controls can converge into one kernel-mediated signaling path. The driver is
+            intentionally honest about what is real and what remains illustrative: the interface contract is
+            concrete, the hardware conduits are reference embodiments, and the safety logic models the shape of
+            what must eventually live in hardware.
+          </p>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat">
+          <div class="stat-value">8B</div>
+          <div class="stat-label">Hint size</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">3</div>
+          <div class="stat-label">Deployment paths</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">3</div>
+          <div class="stat-label">Hardware conduits</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">−20%</div>
+          <div class="stat-label">Decode latency target</div>
+        </div>
+      </div>
+    </header>
 
-      <h2>Why This Lives in the Kernel</h2>
-      <p>
-        The kernel sits at the point where privilege, scheduling context,
-        telemetry, and hardware access intersect. A runtime can describe intent
-        in user space, but someone still has to validate that intent, arbitrate
-        between explicit and inferred signals, expose operating policy, and map
-        the request to a privileged delivery path. That makes the Linux kernel
-        a natural control-plane host even if final safety enforcement belongs in
-        immutable hardware.
-      </p>
+    <main class="shell">
+      <section class="svg-shell" aria-labelledby="fig0-title">
+        <div class="section-kicker">Fig. 0 · Full control-plane stack</div>
+        <svg viewBox="0 0 1160 520" role="img" aria-labelledby="fig0-title fig0-desc">
+          <title id="fig0-title">Six-layer /dev/mem_hint control-plane architecture</title>
+          <desc id="fig0-desc">Six layers from AI runtimes through kernel, privileged conduits, policy engine, and memory devices, plus a dashed telemetry feedback path.</desc>
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#67b8ff"></path>
+            </marker>
+            <marker id="arrowAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#e8a830"></path>
+            </marker>
+          </defs>
+          <rect x="60" y="30" width="1040" height="68" rx="16" fill="#0d1630" stroke="#67b8ff" stroke-opacity="0.3"></rect>
+          <rect x="60" y="112" width="1040" height="60" rx="16" fill="#261c0d" stroke="#e8a830" stroke-opacity="0.35"></rect>
+          <rect x="60" y="186" width="1040" height="70" rx="16" fill="#112315" stroke="#7ed4a8" stroke-opacity="0.35"></rect>
+          <rect x="60" y="270" width="1040" height="60" rx="16" fill="#0e1e26" stroke="#6dd6e7" stroke-opacity="0.35"></rect>
+          <rect x="60" y="344" width="1040" height="70" rx="16" fill="#261215" stroke="#ff7f90" stroke-opacity="0.35"></rect>
+          <rect x="60" y="428" width="1040" height="62" rx="16" fill="#0c1730" stroke="#67b8ff" stroke-opacity="0.35"></rect>
+          <g font-family="'IBM Plex Mono', monospace" font-size="14" fill="#d8e8f8">
+            <text x="88" y="55" fill="#67b8ff">Layer 1 · USER</text>
+            <text x="88" y="77">vLLM / TensorRT-LLM · PyTorch / Megatron · unmodified runtime</text>
+            <text x="88" y="138" fill="#e8a830">Layer 2 · KERN</text>
+            <text x="88" y="159">/dev/mem_hint char device · 8-byte semantic hint packet</text>
+            <text x="88" y="212" fill="#7ed4a8">Layer 3 · KERN</text>
+            <text x="88" y="235">Kernel Driver LKM mem_hint.ko · PMU classifier · sysfs policy/status</text>
+            <text x="88" y="296" fill="#6dd6e7">Layer 4 · PRIV</text>
+            <text x="88" y="317">Privileged Hardware Channel · MSR / MMIO / CXL DVSEC</text>
+            <text x="88" y="370" fill="#ff7f90">Layer 5 · FW</text>
+            <text x="88" y="393">Memory Policy Engine + Hardware Safety Limiter · ECC / latency feedback</text>
+            <text x="88" y="454" fill="#67b8ff">Layer 6 · HW</text>
+            <text x="88" y="476">DDR5 / MRDIMM · HBM2e / HBM3 · CXL 2.0 / 3.0 · GPU HBM3</text>
+          </g>
+          <g stroke-width="3" fill="none">
+            <path d="M580 98 L580 112" stroke="#67b8ff" marker-end="url(#arrow)"></path>
+            <path d="M580 172 L580 186" stroke="#e8a830" marker-end="url(#arrowAmber)"></path>
+            <path d="M580 256 L580 270" stroke="#7ed4a8" marker-end="url(#arrow)"></path>
+            <path d="M580 330 L580 344" stroke="#6dd6e7" marker-end="url(#arrow)"></path>
+            <path d="M580 414 L580 428" stroke="#ff7f90" marker-end="url(#arrow)"></path>
+            <path d="M35 460 C15 360, 15 180, 35 64" stroke="#6dd6e7" stroke-dasharray="10 8"></path>
+          </g>
+        </svg>
+      </section>
 
-      <h2>Three Entry Paths</h2>
-      <ul>
-        <li>
-          Explicit writes from inference or training runtimes when software
-          knows phase boundaries exactly.
-        </li>
-        <li>
-          PMU-driven auto-classification for situations where runtime patches
-          are unavailable.
-        </li>
-        <li>
-          sysfs tuning for operators who need live control over thresholds and
-          per-phase defaults.
-        </li>
-      </ul>
+      <section id="problem">
+        <div class="section-kicker">§01 · The problem</div>
+        <h2>AI software has intent. Memory hardware sees transactions.</h2>
+        <div class="two-col">
+          <div>
+            <p>
+              Modern AI runtimes are phase-rich. A serving stack knows when it is swallowing an entire prompt,
+              when it has entered a latency-sensitive decode loop, when an agent is oscillating between planning
+              and tool I/O, and when a training job has moved from bandwidth-saturating forward propagation into
+              write-heavy backward propagation. The memory system still sees all of this as command streams and queue
+              pressure. It reacts after the fact.
+            </p>
+            <p>
+              That is the central mismatch behind <span class="mono">/dev/mem_hint</span>. The runtime has semantic
+              knowledge. The controller firmware and PHY have knobs. The kernel is the only layer positioned to
+              validate privileged requests, arbitrate multiple hint sources, and broker them into a channel the
+              hardware side can consume. The patent’s core insight is that a predictive control plane is more
+              valuable than a purely reactive one: the right time to adapt memory policy is when software knows a
+              phase boundary is coming, not after latency histograms have already degraded.
+            </p>
+            <div class="callout amber">
+              <div class="title">Core insight</div>
+              <p>
+                Predictive signaling wins because phase semantics arrive before the hardware symptoms. A prefill
+                launch is known at queue dispatch time; a decode bottleneck is only visible after the controller has
+                already accumulated misses, retries, and queueing delay.
+              </p>
+            </div>
+            <div class="callout green">
+              <div class="title">Bridge</div>
+              <p>
+                <span class="mono">/dev/mem_hint</span> bridges this gap by giving user space a stable, 8-byte intent
+                format and giving the kernel a privileged control plane that can map that intent to policy without
+                exposing raw DRAM internals to the runtime.
+              </p>
+            </div>
+          </div>
+          <div class="table-shell">
+            <h3>What each layer knows</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Layer</th>
+                  <th>Knows</th>
+                  <th>Blind to</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>vLLM / TRT</td>
+                  <td>prefill, decode, queue depth, batch geometry</td>
+                  <td>tRCD, V<sub>swing</sub>, ECC drift, PHY equalization</td>
+                </tr>
+                <tr>
+                  <td>Kernel</td>
+                  <td>process context, privileges, PMU counters, sysfs policy</td>
+                  <td>full signal-integrity margin inside the PHY</td>
+                </tr>
+                <tr>
+                  <td>MC firmware</td>
+                  <td>JEDEC bounds, SPD, ECC telemetry, controller topology</td>
+                  <td>runtime phase boundaries and request semantics</td>
+                </tr>
+                <tr>
+                  <td>DDR5 PHY</td>
+                  <td>timing, voltage swing, equalization, retries</td>
+                  <td>why traffic changed and whether it was deliberate</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
-      <h2>Phase Semantics Matter</h2>
-      <p>
-        The important shift is not that software can "tune memory." Firmware
-        and board code already do that. The shift is that the tuning can become
-        workload-aware in a way that tracks AI execution phases instead of
-        static worst-case assumptions. Decode is not prefill. Backward is not
-        forward. Agentic tool-use is not steady-state token generation.
-      </p>
+      <section id="hint-struct">
+        <div class="section-kicker">§02 · The 64-bit workload hint</div>
+        <h2>One register write. Full semantic intent.</h2>
+        <div class="code-shell">
+          <div class="lang">C</div>
+          <pre><code><span class="kw">struct</span> <span class="ty">mem_workload_hint</span> {
+    <span class="ty">uint8_t</span>  phase_id;            <span class="cm">/* [7:0]   phase semantic */</span>
+    <span class="ty">uint16_t</span> latency_target_ns;   <span class="cm">/* [23:8]  latency objective */</span>
+    <span class="ty">uint16_t</span> bw_target_gbps;      <span class="cm">/* [39:24] bandwidth objective */</span>
+    <span class="ty">uint8_t</span>  security_level;      <span class="cm">/* [47:40] TEE / hardening intent */</span>
+    <span class="ty">uint8_t</span>  priority;            <span class="cm">/* [55:48] 0..7 policy aggressiveness */</span>
+    <span class="ty">uint8_t</span>  reserved[<span class="nu">2</span>];         <span class="cm">/* [63:56] reserved for future rail hints */</span>
+} <span class="op">__attribute__</span>((packed));
 
-      <pre><code>phase_id | meaning
----------+-------------------------------------------
-0x01     | Prefill
-0x02     | Decode
-0x03     | Agentic / tool-oriented
-0x04     | Idle
-0x05     | Training forward pass
-0x06     | Training backward pass</code></pre>
+<span class="cm">/* Encoded 64-bit layout:
+ * [63:56] reserved
+ * [55:48] priority
+ * [47:40] security_level
+ * [39:24] bw_target_gbps
+ * [23:8]  latency_target_ns
+ * [7:0]   phase_id
+ */</span></code></pre>
+        </div>
+        <div class="callout amber">
+          <div class="title">Priority rail</div>
+          <p>
+            Priority does not mean “ignore safety.” It means “how far from nominal should policy move toward the
+            phase-optimal setting before the safety limiter clamps it back.” Priority <span class="mono">0</span>
+            means stay close to nominal JEDEC behavior. Priority <span class="mono">7</span> means fully chase the
+            phase table, then let hardware-enforced limits decide the final answer.
+          </p>
+        </div>
+        <div class="phase-rail">
+          <article class="phase-card">
+            <div class="phase-id">0x01</div>
+            <h4>Prefill</h4>
+            <p>High-bandwidth prompt ingestion and KV cache population.</p>
+            <div class="phase-meta">
+              <div>Memory: max sustained bandwidth</div>
+              <div>tRCD: 22</div>
+              <div>V_swing: 300 mV</div>
+              <div>DFE Tap1: 0x10</div>
+            </div>
+          </article>
+          <article class="phase-card">
+            <div class="phase-id">0x02</div>
+            <h4>Decode</h4>
+            <p>Latency-sensitive token generation with read-heavy KV access.</p>
+            <div class="phase-meta">
+              <div>Memory: minimum P99 latency</div>
+              <div>tRCD: 18</div>
+              <div>V_swing: 280 mV</div>
+              <div>DFE Tap1: 0x14</div>
+            </div>
+          </article>
+          <article class="phase-card">
+            <div class="phase-id">0x03</div>
+            <h4>Agentic</h4>
+            <p>Bursty orchestration, tool calls, API waits, and control-plane loops.</p>
+            <div class="phase-meta">
+              <div>Memory: burst tolerance</div>
+              <div>tRCD: 20</div>
+              <div>V_swing: 290 mV</div>
+              <div>DFE Tap1: 0x12</div>
+            </div>
+          </article>
+          <article class="phase-card">
+            <div class="phase-id">0x04</div>
+            <h4>Idle</h4>
+            <p>Near-zero command rate between inference requests or after queue drain.</p>
+            <div class="phase-meta">
+              <div>Memory: minimum power</div>
+              <div>tRCD: 24</div>
+              <div>V_swing: 240 mV</div>
+              <div>DFE Tap1: 0x08</div>
+            </div>
+          </article>
+        </div>
+        <div class="table-shell" style="margin-top: 18px;">
+          <h3>Training phases</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Phase</th>
+                <th>ID</th>
+                <th>Description</th>
+                <th>Latency target</th>
+                <th>Bandwidth target</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>ForwardPass</td>
+                <td>0x05</td>
+                <td>Training forward pass, same profile as prefill</td>
+                <td>200 ns</td>
+                <td>400 GB/s</td>
+              </tr>
+              <tr>
+                <td>BackwardPass</td>
+                <td>0x06</td>
+                <td>Gradient write-heavy phase with reduced tWR objective</td>
+                <td>90 ns</td>
+                <td>300 GB/s</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-      <h2>Safety Is Not Optional</h2>
-      <p>
-        Any system that lets software influence timing or signaling must make
-        safety the first-class story, not a footnote. That is why the reference
-        architecture keeps a hard distinction between policy and enforcement.
-        The driver proposes. The safety limiter decides. In a real platform,
-        the limiter would be hardware logic bounded by JEDEC requirements, ECC
-        telemetry, and security-state floors.
-      </p>
+      <section id="kernel-driver">
+        <div class="section-kicker">§03 · Kernel driver — mem_hint.ko</div>
+        <h2>Turning a hint into a privileged hardware event.</h2>
+        <div class="flow-bar">
+          <div class="flow-step">write()</div>
+          <div class="flow-step">copy_from_user()</div>
+          <div class="flow-step">validate()</div>
+          <div class="flow-step">encode()</div>
+          <div class="flow-step">wrmsrl() / iowrite32()</div>
+        </div>
+        <div class="code-grid">
+          <div class="code-shell">
+            <div class="lang">C</div>
+            <pre><code><span class="kw">#include</span> <span class="st">&lt;linux/module.h&gt;</span>
+<span class="kw">#include</span> <span class="st">&lt;linux/fs.h&gt;</span>
+<span class="kw">#include</span> <span class="st">&lt;linux/uaccess.h&gt;</span>
+<span class="kw">#include</span> <span class="st">&lt;linux/device.h&gt;</span>
+<span class="kw">#include</span> <span class="st">&lt;asm/msr.h&gt;</span>
 
-      <h2>CXL Changes the Shape of the Problem</h2>
-      <p>
-        Once memory extends across a CXL fabric, the question is no longer only
-        "what timing should this DDR channel use?" It becomes "which region
-        should respond how, under what congestion state, and with what
-        locality?" A meaningful embodiment of workload-aware memory policy
-        eventually has to reason about fabrics, HDM regions, and NUMA-aware
-        propagation.
-      </p>
+<span class="kw">static const struct</span> <span class="ty">file_operations</span> fops = {
+    .owner = THIS_MODULE,
+    .write = <span class="fn">mem_hint_write</span>,
+};
 
-      <h2>Reference Repository</h2>
-      <p>
-        The companion repository packages this idea as a production-style Linux
-        kernel module, a userspace C library, a Python client, realistic
-        integration examples, and operator documentation. The code is
-        illustrative where it touches hardware-specific details, but it is
-        intentionally concrete about the interface contract.
-      </p>
+<span class="kw">static int</span> <span class="fn">__init</span> <span class="fn">mem_hint_init</span>(<span class="kw">void</span>)
+{
+    <span class="kw">int</span> ret;
+    ret = <span class="fn">register_chrdev</span>(<span class="nu">240</span>, <span class="st">"mem_hint"</span>, &amp;fops);
+    <span class="kw">if</span> (ret &lt; <span class="nu">0</span>)
+        <span class="kw">return</span> ret;
 
-      <p>
-        Repository: <a href="https://github.com/manishklach/mem-hint">github.com/manishklach/mem-hint</a>
-      </p>
-    </article>
+    mem_hint_class = <span class="fn">class_create</span>(<span class="st">"mem_hint"</span>);
+    mem_hint_dev = <span class="fn">device_create</span>(mem_hint_class, NULL,
+        <span class="fn">MKDEV</span>(<span class="nu">240</span>, <span class="nu">0</span>), NULL, <span class="st">"mem_hint"</span>);
+    <span class="fn">mem_hint_pmu_init</span>();
+    <span class="fn">mem_hint_sysfs_init</span>();
+    <span class="kw">return</span> <span class="nu">0</span>;
+}
+
+<span class="fn">MODULE_LICENSE</span>(<span class="st">"GPL"</span>);
+<span class="fn">MODULE_AUTHOR</span>(<span class="st">"Manish KL"</span>);
+<span class="fn">MODULE_DESCRIPTION</span>(<span class="st">"AI workload hint interface"</span>);</code></pre>
+          </div>
+          <div class="code-shell">
+            <div class="lang">C</div>
+            <pre><code><span class="kw">static</span> <span class="ty">ssize_t</span> <span class="fn">mem_hint_write</span>(<span class="kw">struct</span> file *file,
+                                  <span class="kw">const</span> <span class="kw">char</span> __user *buf,
+                                  <span class="ty">size_t</span> len, loff_t *ppos)
+{
+    <span class="kw">struct</span> <span class="ty">mem_workload_hint</span> hint;
+    <span class="kw">int</span> ret;
+
+    <span class="kw">if</span> (!<span class="fn">capable</span>(CAP_SYS_ADMIN))
+        <span class="kw">return</span> -EPERM;
+    <span class="kw">if</span> (len &lt; <span class="kw">sizeof</span>(hint))
+        <span class="kw">return</span> -EINVAL;
+    <span class="kw">if</span> (<span class="fn">copy_from_user</span>(&amp;hint, buf, <span class="kw">sizeof</span>(hint)))
+        <span class="kw">return</span> -EFAULT;
+
+    <span class="kw">if</span> (hint.phase_id &lt; PHASE_PREFILL || hint.phase_id &gt; PHASE_BACKWARD)
+        <span class="kw">return</span> -EINVAL;
+    <span class="kw">if</span> (hint.priority &gt; <span class="nu">7</span>)
+        hint.priority = <span class="nu">7</span>;
+    <span class="kw">if</span> (hint.security_level &gt; <span class="nu">0</span>)
+        <span class="fn">pr_warn_ratelimited</span>(<span class="st">"TEE validation is illustrative"</span>);
+
+    ret = <span class="fn">mem_hint_apply</span>(&amp;hint);
+    <span class="kw">if</span> (ret)
+        <span class="kw">return</span> ret;
+
+    <span class="fn">atomic_set</span>(&amp;current_phase_id, hint.phase_id);
+    <span class="fn">sysfs_notify</span>(NULL, <span class="st">"status"</span>, <span class="st">"current_phase"</span>);
+    <span class="kw">return</span> <span class="kw">sizeof</span>(hint);
+}</code></pre>
+          </div>
+          <div class="code-shell">
+            <div class="lang">C</div>
+            <pre><code><span class="kw">static</span> <span class="ty">u64</span> <span class="fn">encode_hint</span>(<span class="kw">const struct</span> mem_workload_hint *h)
+{
+    <span class="ty">u64</span> val = <span class="nu">0</span>;
+    val |= (<span class="ty">u64</span>)h-&gt;phase_id;
+    val |= ((<span class="ty">u64</span>)h-&gt;latency_target_ns &amp; <span class="nu">0xffffULL</span>) &lt;&lt; <span class="nu">8</span>;
+    val |= ((<span class="ty">u64</span>)h-&gt;bw_target_gbps &amp; <span class="nu">0xffffULL</span>) &lt;&lt; <span class="nu">24</span>;
+    val |= ((<span class="ty">u64</span>)h-&gt;security_level &amp; <span class="nu">0xffULL</span>) &lt;&lt; <span class="nu">40</span>;
+    val |= ((<span class="ty">u64</span>)h-&gt;priority &amp; <span class="nu">0xffULL</span>) &lt;&lt; <span class="nu">48</span>;
+    <span class="kw">return</span> val;
+}
+
+<span class="kw">int</span> <span class="fn">mem_hint_apply</span>(<span class="kw">const struct</span> mem_workload_hint *h)
+{
+    <span class="ty">u64</span> val = <span class="fn">encode_hint</span>(h);
+    <span class="kw">switch</span> (active_channel) {
+    <span class="kw">case</span> CH_MSR:
+        <span class="kw">if</span> (<span class="fn">mem_hint_should_touch_hw</span>())
+            <span class="fn">wrmsrl</span>(MEM_HINT_MSR, val);
+        <span class="kw">break</span>;
+    <span class="kw">case</span> CH_MMIO:
+        <span class="kw">if</span> (mc_mmio_base)
+            <span class="fn">iowrite64</span>(val, mc_mmio_base + MEM_HINT_MMIO_OFFSET);
+        <span class="kw">break</span>;
+    <span class="kw">case</span> CH_CXL_DVSEC:
+        <span class="fn">pr_debug</span>(<span class="st">"illustrative CXL DVSEC path: 0x%llx"</span>, val);
+        <span class="kw">break</span>;
+    }
+    <span class="kw">return</span> <span class="nu">0</span>;
+}</code></pre>
+          </div>
+        </div>
+        <div class="callout amber">
+          <div class="title">Illustrative MSR note</div>
+          <p>
+            The MSR number in the reference driver is deliberately illustrative. The point of the implementation is
+            the interface contract and privilege boundary, not a claim that any current x86 or ARM platform already
+            exposes this exact register.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-kicker">§04 · User-space integration</div>
+        <h2>One phase transition. One hint. Zero DRAM internals required.</h2>
+        <div class="two-col">
+          <div class="code-shell">
+            <div class="lang">Python</div>
+            <pre><code><span class="kw">import</span> <span class="ty">struct</span>
+
+PHASE_PREFILL  = <span class="nu">0x01</span>
+PHASE_DECODE   = <span class="nu">0x02</span>
+PHASE_AGENTIC  = <span class="nu">0x03</span>
+PHASE_IDLE     = <span class="nu">0x04</span>
+
+<span class="kw">class</span> <span class="ty">MemHintScheduler</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, client):
+        self.client = client
+
+    <span class="kw">def</span> <span class="fn">on_prefill_start</span>(self, batch_size: <span class="ty">int</span>):
+        self.client.send(PHASE_PREFILL, latency_ns=<span class="nu">200</span>,
+                         bw_gbps=<span class="nu">400</span>, priority=<span class="nu">7</span>)
+
+    <span class="kw">def</span> <span class="fn">on_decode_start</span>(self, request_id: <span class="ty">str</span>):
+        self.client.send(PHASE_DECODE, latency_ns=<span class="nu">90</span>,
+                         bw_gbps=<span class="nu">150</span>, priority=<span class="nu">7</span>)
+
+    <span class="kw">def</span> <span class="fn">on_tool_call</span>(self, tool_name: <span class="ty">str</span>):
+        self.client.send(PHASE_AGENTIC, latency_ns=<span class="nu">120</span>,
+                         bw_gbps=<span class="nu">200</span>, priority=<span class="nu">5</span>)
+
+    <span class="kw">def</span> <span class="fn">on_idle</span>(self):
+        self.client.send(PHASE_IDLE, latency_ns=<span class="nu">0</span>,
+                         bw_gbps=<span class="nu">0</span>, priority=<span class="nu">3</span>)
+
+payload = struct.pack(<span class="st">"&lt;BHHBB2s"</span>, <span class="nu">0x02</span>, <span class="nu">90</span>, <span class="nu">150</span>, <span class="nu">0</span>, <span class="nu">7</span>, <span class="st">b"\x00\x00"</span>)</code></pre>
+          </div>
+          <div class="code-shell">
+            <div class="lang">C</div>
+            <pre><code><span class="kw">typedef struct</span> <span class="ty">mem_workload_hint</span> {
+    <span class="ty">uint8_t</span>  phase_id;
+    <span class="ty">uint16_t</span> latency_target_ns;
+    <span class="ty">uint16_t</span> bw_target_gbps;
+    <span class="ty">uint8_t</span>  security_level;
+    <span class="ty">uint8_t</span>  priority;
+    <span class="ty">uint8_t</span>  reserved[<span class="nu">2</span>];
+} <span class="ty">mem_hint_t</span>;
+
+<span class="kw">static inline int</span> <span class="fn">mem_hint_send</span>(<span class="kw">int</span> fd, <span class="ty">mem_hint_t</span> hint)
+{
+    <span class="kw">return</span> <span class="fn">write</span>(fd, &amp;hint, <span class="kw">sizeof</span>(hint)) == <span class="kw">sizeof</span>(hint) ? <span class="nu">0</span> : -<span class="nu">1</span>;
+}
+
+mem_hint_t prefill = { .phase_id = <span class="nu">0x01</span>, .latency_target_ns = <span class="nu">200</span>,
+                       .bw_target_gbps = <span class="nu">400</span>, .priority = <span class="nu">7</span> };
+mem_hint_t decode  = { .phase_id = <span class="nu">0x02</span>, .latency_target_ns = <span class="nu">90</span>,
+                       .bw_target_gbps = <span class="nu">150</span>, .priority = <span class="nu">7</span> };
+
+<span class="fn">mem_hint_send</span>(fd, prefill);
+<span class="fn">mem_hint_send</span>(fd, decode);</code></pre>
+          </div>
+        </div>
+        <div class="callout green">
+          <div class="title">Design principle</div>
+          <p>
+            The runtime never needs to know <span class="mono">tRCD</span>, <span class="mono">DFE Tap1</span>, or
+            <span class="mono">V_swing</span>. It only declares intent. Policy selection, hardware dispatch, and safety
+            enforcement stay below the ABI boundary.
+          </p>
+        </div>
+      </section>
+
+      <section id="pmu-path">
+        <div class="section-kicker">§05 · Automatic path — PMU classification</div>
+        <h2>Works on unmodified runtimes. Zero application changes.</h2>
+        <div class="two-col">
+          <div>
+            <p>
+              Not every deployment can patch vLLM, TensorRT-LLM, or a training stack immediately. The PMU path lets
+              the kernel infer workload phase from memory telemetry. It is less exact than explicit hints, but it
+              preserves the same policy machinery and the same safety model.
+            </p>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Event</th>
+                    <th>Source</th>
+                    <th>Interpretation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>UNC_M_CAS_COUNT.WR</td>
+                    <td>IMC uncore</td>
+                    <td>High write bandwidth points toward Prefill</td>
+                  </tr>
+                  <tr>
+                    <td>UNC_M_CAS_COUNT.RD</td>
+                    <td>IMC uncore</td>
+                    <td>High read with low write points toward Decode</td>
+                  </tr>
+                  <tr>
+                    <td>MEM_LOAD_RETIRED.L3_MISS</td>
+                    <td>Core PMU</td>
+                    <td>Decode and Agentic miss pressure discriminator</td>
+                  </tr>
+                  <tr>
+                    <td>OFFCORE_REQUESTS</td>
+                    <td>Core PMU</td>
+                    <td>Bandwidth variance signal for Agentic mode</td>
+                  </tr>
+                  <tr>
+                    <td>UNC_M_CMD_RATE</td>
+                    <td>IMC uncore</td>
+                    <td>&lt;1000/s implies Idle</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="code-shell">
+            <div class="lang">C</div>
+            <pre><code><span class="kw">struct</span> <span class="ty">pmu_sample</span> {
+    <span class="ty">u32</span> write_bw_gbps;
+    <span class="ty">u32</span> read_bw_gbps;
+    <span class="ty">u32</span> llc_miss_rate;
+    <span class="ty">u32</span> bw_variance_pct;
+    <span class="ty">u32</span> dram_cmd_rate;
+};
+
+<span class="kw">static</span> <span class="ty">u8</span> <span class="fn">classify_phase</span>(<span class="kw">const struct</span> pmu_sample *s, <span class="ty">u8</span> prev)
+{
+    <span class="kw">if</span> (s-&gt;write_bw_gbps &gt; <span class="nu">10</span> &amp;&amp; s-&gt;write_bw_gbps &gt; s-&gt;read_bw_gbps)
+        <span class="kw">return</span> PHASE_PREFILL;
+    <span class="kw">if</span> (s-&gt;read_bw_gbps &gt; s-&gt;write_bw_gbps * <span class="nu">2</span> &amp;&amp;
+        s-&gt;write_bw_gbps &lt; <span class="nu">1</span> &amp;&amp; s-&gt;llc_miss_rate &gt; <span class="nu">5000</span>)
+        <span class="kw">return</span> PHASE_DECODE;
+    <span class="kw">if</span> (s-&gt;bw_variance_pct &gt; <span class="nu">50</span>)
+        <span class="kw">return</span> PHASE_AGENTIC;
+    <span class="kw">if</span> (s-&gt;dram_cmd_rate &lt; <span class="nu">1000</span>)
+        <span class="kw">return</span> PHASE_IDLE;
+    <span class="kw">return</span> prev; <span class="cm">/* hysteresis */</span>
+}
+
+<span class="kw">static</span> <span class="ty">irqreturn_t</span> <span class="fn">pmu_overflow_handler</span>(...)
+{
+    <span class="kw">struct</span> pmu_sample s = <span class="fn">collect_pmu_sample</span>();
+    <span class="ty">u8</span> next = <span class="fn">classify_phase</span>(&amp;s, <span class="fn">atomic_read</span>(&amp;current_phase_id));
+    <span class="cm">/* synthesize mem_workload_hint and call mem_hint_apply() */</span>
+    <span class="kw">return</span> IRQ_HANDLED;
+}</code></pre>
+          </div>
+        </div>
+        <div class="mode-grid">
+          <div class="grid-card green">
+            <div class="tag">Mode 01 · Best accuracy</div>
+            <h3>Explicit hint</h3>
+            <p>Runtime knows the exact phase boundary and writes it directly into <span class="mono">/dev/mem_hint</span>.</p>
+          </div>
+          <div class="grid-card amber">
+            <div class="tag">Mode 02 · Zero app changes</div>
+            <h3>PMU auto-classify</h3>
+            <p>Kernel infers phase from IMC and core PMU signatures with hysteresis to avoid mode thrash.</p>
+          </div>
+          <div class="grid-card blue">
+            <div class="tag">Mode 03 · Operator control</div>
+            <h3>sysfs policy tuning</h3>
+            <p>Operators tune thresholds and policy defaults live while explicit hints and PMU inference reuse the same ABI.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="sysfs">
+        <div class="section-kicker">§06 · sysfs — live policy control</div>
+        <h2>Tune without recompiling the runtime.</h2>
+        <div class="two-col">
+          <div class="side-tree">
+            <div class="mono-list">/sys/bus/platform/drivers/mem_hint/
+├── policy/
+│   ├── decode_trcd
+│   ├── decode_vswing_mv
+│   ├── decode_dfe_tap1
+│   ├── prefill_vswing_mv
+│   ├── prefill_ctle_gain_db
+│   ├── agentic_priority
+│   ├── idle_pll_reduction
+│   └── idle_vswing_mv
+├── thresholds/
+│   ├── prefill_write_bw_gbps
+│   ├── decode_write_bw_ceiling
+│   ├── decode_llc_miss_floor
+│   ├── agentic_bw_variance_pct
+│   └── idle_cmd_rate_floor
+└── status/
+    ├── current_phase
+    ├── ecc_correctable_rate
+    ├── ecc_uncorrectable_count
+    ├── read_retry_count
+    ├── last_transition_ms
+    ├── p99_latency_ns
+    └── active_channel</div>
+          </div>
+          <div class="code-shell">
+            <div class="lang">Bash</div>
+            <pre><code><span class="cm"># Tighten decode latency policy</span>
+echo <span class="nu">18</span> &gt; /sys/bus/platform/drivers/mem_hint/policy/decode_trcd
+
+<span class="cm"># Watch current phase in real time</span>
+watch -n <span class="nu">0.1</span> cat /sys/bus/platform/drivers/mem_hint/status/current_phase
+
+<span class="cm"># Lower the prefill classification threshold</span>
+echo <span class="nu">8</span> &gt; /sys/bus/platform/drivers/mem_hint/thresholds/prefill_write_bw_gbps
+
+<span class="cm"># Disable idle PLL reduction for validation</span>
+echo <span class="nu">0</span> &gt; /sys/bus/platform/drivers/mem_hint/policy/idle_pll_reduction
+
+<span class="cm"># Check current P99 latency feedback</span>
+cat /sys/bus/platform/drivers/mem_hint/status/p99_latency_ns
+
+<span class="cm"># Security hardening: raise agentic priority floor conservatively</span>
+echo <span class="nu">4</span> &gt; /sys/bus/platform/drivers/mem_hint/policy/agentic_priority</code></pre>
+          </div>
+        </div>
+        <div class="callout green">
+          <div class="title">Closed loop</div>
+          <p>
+            sysfs is the operator face of the closed-loop control system. ECC telemetry and latency feedback tell the
+            safety layer when to back off; sysfs lets the operator tune how aggressively explicit hints or PMU
+            inference attempt to move the system before the hardware clamp intervenes.
+          </p>
+        </div>
+      </section>
+
+      <section id="hardware">
+        <div class="section-kicker">§07 · Hardware path</div>
+        <h2>Three conduits. One policy engine. Full PHY coverage.</h2>
+        <div class="conduit-grid">
+          <div class="grid-card">
+            <div class="tag" style="color: var(--amber);">Claim 4</div>
+            <h3>MSR path</h3>
+            <p><span class="mono">wrmsrl()</span>-style local conduit for CPU-adjacent memory-control embodiments, including x86 server prototypes or Arm Neoverse-style privileged register designs.</p>
+          </div>
+          <div class="grid-card">
+            <div class="tag" style="color: var(--cyan);">Claim 5</div>
+            <h3>MMIO path</h3>
+            <p><span class="mono">ioremap()</span>-backed firmware register interface for discrete memory-controller ASICs, PHY IP, or simulation models from vendors such as Rambus or Synopsys.</p>
+          </div>
+          <div class="grid-card">
+            <div class="tag" style="color: var(--green);">Claim 6</div>
+            <h3>CXL DVSEC path</h3>
+            <p>Per-HDM-region policy expression across the fabric, enabling the same semantic hint contract to steer pooled or attached memory behind CXL 2.0 / 3.0 devices.</p>
+          </div>
+        </div>
+        <div class="svg-shell" style="margin-top: 18px;">
+          <div class="section-kicker">Fig. 1 · Policy engine</div>
+          <svg viewBox="0 0 1160 420" role="img" aria-label="Policy engine and safety limiter diagram">
+            <defs>
+              <marker id="arrow2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="#67b8ff"></path>
+              </marker>
+            </defs>
+            <rect x="40" y="120" width="220" height="120" rx="18" fill="#191109" stroke="#e8a830" stroke-opacity="0.45"></rect>
+            <rect x="330" y="80" width="290" height="190" rx="18" fill="#0f1626" stroke="#67b8ff" stroke-opacity="0.35"></rect>
+            <rect x="700" y="105" width="220" height="140" rx="18" fill="#241216" stroke="#ff7f90" stroke-opacity="0.4"></rect>
+            <rect x="970" y="60" width="150" height="78" rx="16" fill="#112315" stroke="#7ed4a8" stroke-opacity="0.35"></rect>
+            <rect x="970" y="170" width="150" height="78" rx="16" fill="#112315" stroke="#7ed4a8" stroke-opacity="0.35"></rect>
+            <rect x="970" y="280" width="150" height="78" rx="16" fill="#112315" stroke="#7ed4a8" stroke-opacity="0.35"></rect>
+            <g font-family="'IBM Plex Mono', monospace" font-size="14" fill="#d8e8f8">
+              <text x="64" y="148" fill="#e8a830">Hint</text>
+              <text x="64" y="176">phase=0x02</text>
+              <text x="64" y="198">priority=7</text>
+              <text x="64" y="220">latency=90ns</text>
+
+              <text x="354" y="112" fill="#67b8ff">Policy Engine</text>
+              <text x="354" y="142">lookup: decode profile</text>
+              <text x="354" y="164">predictive scheduler: 500us window</text>
+              <text x="354" y="186">feedback: ECC + p99 latency</text>
+              <text x="354" y="208">priority scaling against nominal</text>
+
+              <text x="724" y="138" fill="#ff7f90">Safety Limiter</text>
+              <text x="724" y="168">clamp timing</text>
+              <text x="724" y="190">JEDEC bounds</text>
+              <text x="724" y="212">SPD-derived constraints</text>
+
+              <text x="995" y="104" fill="#7ed4a8">Timing</text>
+              <text x="995" y="214" fill="#7ed4a8">Electrical</text>
+              <text x="995" y="324" fill="#7ed4a8">Equalization</text>
+            </g>
+            <path d="M260 180 L330 180" stroke="#67b8ff" stroke-width="3" fill="none" marker-end="url(#arrow2)"></path>
+            <path d="M620 180 L700 180" stroke="#67b8ff" stroke-width="3" fill="none" marker-end="url(#arrow2)"></path>
+            <path d="M920 140 L970 100" stroke="#67b8ff" stroke-width="3" fill="none" marker-end="url(#arrow2)"></path>
+            <path d="M920 175 L970 210" stroke="#67b8ff" stroke-width="3" fill="none" marker-end="url(#arrow2)"></path>
+            <path d="M920 220 L970 320" stroke="#67b8ff" stroke-width="3" fill="none" marker-end="url(#arrow2)"></path>
+            <path d="M1045 60 C1045 20, 540 20, 540 80" stroke="#6dd6e7" stroke-width="2.5" stroke-dasharray="10 8" fill="none" marker-end="url(#arrow2)"></path>
+          </svg>
+        </div>
+        <div class="table-shell" style="margin-top: 18px;">
+          <h3>PHY configuration table</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Phase</th>
+                <th>tRCD</th>
+                <th>V_swing</th>
+                <th>DFE Tap1</th>
+                <th>CTLE</th>
+                <th>Refresh</th>
+                <th>Objective</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Prefill</td>
+                <td>22</td>
+                <td>300 mV</td>
+                <td>0x10</td>
+                <td>+2 dB</td>
+                <td>Nominal</td>
+                <td>Sustain write-oriented bandwidth</td>
+              </tr>
+              <tr>
+                <td>Decode</td>
+                <td>18</td>
+                <td>280 mV</td>
+                <td>0x14</td>
+                <td>+3 dB</td>
+                <td>Nominal</td>
+                <td>Minimize P99 decode latency</td>
+              </tr>
+              <tr>
+                <td>Agentic</td>
+                <td>20</td>
+                <td>290 mV</td>
+                <td>0x12</td>
+                <td>+2 dB</td>
+                <td>Nominal</td>
+                <td>Tolerate burst and variance</td>
+              </tr>
+              <tr>
+                <td>Idle</td>
+                <td>24</td>
+                <td>240 mV</td>
+                <td>0x08</td>
+                <td>0 dB</td>
+                <td>Reduced</td>
+                <td>Lower power while staying safe</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="safety">
+        <div class="section-kicker">§08 · Safety — hardware root of trust</div>
+        <h2>Software expresses intent. Hardware enforces the law.</h2>
+        <div class="two-col">
+          <div>
+            <p>
+              A workload-aware memory interface without a hard safety boundary would be irresponsible. The moment
+              software can ask for lower timing, more aggressive electrical drive, or region-specific behavior, the
+              memory system becomes part of the attack surface. That includes stability attacks, thermal margin abuse,
+              and any mechanism that intentionally reduces timing guard bands.
+            </p>
+            <p>
+              The right analogy is Rowhammer. Rowhammer mattered because the interface between software activity and
+              physical memory behavior was tighter than people assumed. <span class="mono">/dev/mem_hint</span> takes
+              that lesson seriously: software may propose a phase-appropriate mode, but hardware is the final
+              authority. The limiter in this repository is a software model of that idea, not a substitute for the
+              immutable ASIC logic described by the patent.
+            </p>
+            <div class="callout red">
+              <div class="title">What the safety limiter prevents</div>
+              <p>
+                It prevents unsafe requests such as <span class="mono">tRCD=10</span> on a platform whose SPD floor is
+                <span class="mono">14</span>, over-driving a marginal channel with
+                <span class="mono">vswing=800mV</span>, or allowing a high-security context to run with a decode
+                profile that undercuts the system’s conservative nominal floor.
+              </p>
+            </div>
+          </div>
+          <div class="code-shell">
+            <div class="lang">C</div>
+            <pre><code><span class="kw">struct</span> <span class="ty">phy_config</span> {
+    <span class="ty">u8</span>  tRCD, tCL, tRP, tRAS;
+    <span class="ty">u16</span> vswing_mv;
+    <span class="ty">u8</span>  dfe_tap[<span class="nu">4</span>];
+    <span class="ty">s8</span>  ctle_gain_db;
+    <span class="ty">u8</span>  refresh_mode;
+};
+
+<span class="kw">struct</span> <span class="ty">jedec_limits</span> {
+    <span class="ty">u8</span> min_tRCD, max_tRCD;
+    <span class="ty">u8</span> min_tCL,  max_tCL;
+    <span class="ty">u8</span> min_tRP,  max_tRP;
+    <span class="ty">u16</span> min_vswing_mv, max_vswing_mv;
+};
+
+<span class="kw">static struct</span> phy_config <span class="fn">safety_clamp</span>(<span class="kw">struct</span> phy_config p,
+                                     <span class="kw">struct</span> jedec_limits l,
+                                     <span class="kw">struct</span> ecc_telemetry e)
+{
+    p.tRCD = <span class="fn">clamp_t</span>(u8, p.tRCD, l.min_tRCD, l.max_tRCD);
+    p.tCL  = <span class="fn">clamp_t</span>(u8, p.tCL,  l.min_tCL,  l.max_tCL);
+    p.tRP  = <span class="fn">clamp_t</span>(u8, p.tRP,  l.min_tRP,  l.max_tRP);
+    p.vswing_mv = <span class="fn">clamp_t</span>(u16, p.vswing_mv,
+                            l.min_vswing_mv, l.max_vswing_mv);
+    <span class="kw">if</span> (e.correctable_rate &gt; <span class="nu">1000000ULL</span>) {
+        p.tRCD = <span class="fn">min_t</span>(u8, p.tRCD + <span class="nu">1</span>, l.max_tRCD);
+        p.tCL  = <span class="fn">min_t</span>(u8, p.tCL  + <span class="nu">1</span>, l.max_tCL);
+    }
+    <span class="kw">if</span> (security_level &gt; <span class="nu">0</span>) {
+        p.tRCD = <span class="fn">max_t</span>(u8, p.tRCD, <span class="nu">22</span>);
+        p.tCL  = <span class="fn">max_t</span>(u8, p.tCL,  <span class="nu">22</span>);
+    }
+    <span class="kw">return</span> p;
+}</code></pre>
+          </div>
+        </div>
+        <div class="callout amber">
+          <div class="title">Claim 10 reference framing</div>
+          <p>
+            Claim 10 is the legal articulation of this engineering rule: software may request a memory-performance
+            posture, but an independent limiter must bound the request against platform-safe timing and signaling
+            ranges before any hardware state changes occur.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-kicker">§09 · Why it matters</div>
+        <h2>A new contract between AI software and memory hardware.</h2>
+        <div class="table-shell comparison">
+          <table>
+            <thead>
+              <tr>
+                <th>Current systems</th>
+                <th>/dev/mem_hint systems</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Memory hardware reacts after queue pressure appears</td>
+                <td>Runtime can express phase intent before symptoms accumulate</td>
+              </tr>
+              <tr>
+                <td>Decode and prefill share blunt one-size-fits-all memory policy</td>
+                <td>Each phase can map to a distinct policy objective</td>
+              </tr>
+              <tr>
+                <td>Unmodified applications expose no semantic signal to firmware</td>
+                <td>PMU classification provides a zero-app-change fallback</td>
+              </tr>
+              <tr>
+                <td>Operators tune heuristics without a stable ABI</td>
+                <td>sysfs exposes a coherent policy surface for tuning and observability</td>
+              </tr>
+              <tr>
+                <td>Safety is often implicit and opaque</td>
+                <td>Safety is explicit, bounded, and architecturally central</td>
+              </tr>
+              <tr>
+                <td>CXL and local memory pools look unrelated to software</td>
+                <td>One semantic hint can feed multiple hardware conduits</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout amber" style="margin-top: 18px;">
+          <div class="title">Novelty summary</div>
+          <p>
+            The novelty is not “software can tune memory.” The novelty is a kernel-mediated semantic hint interface
+            that lets AI runtimes communicate phase intent to a privileged policy engine while keeping the final
+            enforcement mechanism outside the runtime and below the ABI boundary. Indian Patent Application
+            <span class="mono">202641053160</span>.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-kicker">§10 · Closing</div>
+        <h2>Memory needs an intent interface. Now it has one.</h2>
+        <div class="closing-grid">
+          <div>
+            <p>
+              AI infrastructure already evolved past the idea that compute alone sets performance. Memory policy,
+              fabric topology, cache residency, queue geometry, and latency tail behavior all shape end-to-end
+              usefulness. Yet memory hardware is still usually driven as if phase intent were unknowable.
+            </p>
+            <p>
+              <span class="mono">/dev/mem_hint</span> is a concrete answer to that gap. It gives runtimes a minimal
+              semantic vocabulary, gives the kernel a privileged place to validate and multiplex that intent, and
+              gives hardware designers a clean boundary where policy and safety can meet.
+            </p>
+            <p>
+              This repository is a reference implementation, not a shipping hardware enablement package. But the
+              contract is real, the software surfaces are buildable, and the architecture points toward a future where
+              memory policy can finally become phase-aware instead of permanently reactive.
+            </p>
+            <div class="callout green">
+              <div class="title">Patent pending notice</div>
+              <p>
+                Patent Pending: Indian Patent Application No. <span class="mono">202641053160</span>, filed 26 April
+                2026 by Manish KL. This article and repository describe a reference embodiment for research,
+                interoperability discussion, and systems-architecture review.
+              </p>
+            </div>
+          </div>
+          <div class="closing-card">
+            <div class="big">202641053160</div>
+            <p><span class="mono">Reference:</span> TEMP/E1/58075/2026-CHE</p>
+            <p><span class="mono">Filed:</span> 26 April 2026</p>
+            <p><span class="mono">Claims:</span> kernel hint ABI, privileged conduits, safety limiter, CXL embodiment</p>
+            <p><span class="mono" style="color: var(--red);">Complete spec deadline:</span> provisional conversion window applies</p>
+            <p><span class="mono">Inventor:</span> Manish KL</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="shell">
+        <div>/dev/mem_hint · © 2026 Manish KL · Patent Pending</div>
+        <div></div>
+      </div>
+    </footer>
   </body>
 </html>
