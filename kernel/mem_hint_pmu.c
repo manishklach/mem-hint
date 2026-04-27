@@ -10,16 +10,11 @@
 #include <linux/ktime.h>
 #include <linux/moduleparam.h>
 #include <linux/string.h>
+#ifdef CONFIG_PERF_EVENTS
+#include <linux/perf_event.h>
+#endif
 
 #include "mem_hint.h"
-
-struct pmu_sample {
-	u32 write_bw_gbps;
-	u32 read_bw_gbps;
-	u32 llc_miss_rate;
-	u32 bw_variance_pct;
-	u32 dram_cmd_rate;
-};
 
 unsigned int prefill_wr_thresh = 10;
 unsigned int decode_wr_ceil = 1;
@@ -44,24 +39,22 @@ module_param(idle_cmd_thresh, uint, 0644);
  */
 static struct pmu_sample collect_pmu_sample(void)
 {
-	struct pmu_sample sample;
-	u64 tick;
+	static struct pmu_sample s = {
+		.write_bw_gbps = 5,
+		.read_bw_gbps = 8,
+		.llc_miss_rate = 6000,
+		.bw_variance_pct = 20,
+		.dram_cmd_rate = 50000,
+	};
 
 	/*
-	 * Real implementation would use perf_event_create_kernel_counter()
-	 * against uncore IMC and core PMU events, then convert counter
-	 * deltas into rates over the 100 us polling interval. This stub
-	 * simulates changing demand so the reference control path can be
-	 * exercised on ordinary development systems.
+	 * In production: read IMC uncore counters via
+	 * perf_event_create_kernel_counter() on:
+	 *   UNC_M_CAS_COUNT.WR, UNC_M_CAS_COUNT.RD,
+	 *   MEM_LOAD_RETIRED.L3_MISS, UNC_M_CMD_RATE
+	 * This stub returns simulated values for reference.
 	 */
-	tick = ktime_get_ns() / 100000ULL;
-	sample.write_bw_gbps = (tick % 7 == 0) ? 14 : ((tick % 5 == 0) ? 0 : 1);
-	sample.read_bw_gbps = (tick % 3 == 0) ? 6 : 3;
-	sample.llc_miss_rate = (tick % 4 == 0) ? 7000 : 1200;
-	sample.bw_variance_pct = (tick % 6 == 0) ? 65 : 10;
-	sample.dram_cmd_rate = (tick % 11 == 0) ? 800 : 6000;
-
-	return sample;
+	return s;
 }
 
 static u8 classify_phase(const struct pmu_sample *sample, u8 prev_phase)
@@ -84,7 +77,7 @@ static u8 classify_phase(const struct pmu_sample *sample, u8 prev_phase)
 	return prev_phase;
 }
 
-static enum hrtimer_restart mem_hint_pmu_timer(struct hrtimer *timer)
+static enum hrtimer_restart pmu_timer_callback(struct hrtimer *t)
 {
 	struct pmu_sample sample;
 	struct mem_workload_hint hint;
@@ -116,14 +109,14 @@ static enum hrtimer_restart mem_hint_pmu_timer(struct hrtimer *timer)
 		mem_hint_apply(&hint);
 	}
 
-	hrtimer_forward_now(timer, ns_to_ktime(100000));
+	hrtimer_forward_now(t, ns_to_ktime(100000));
 	return HRTIMER_RESTART;
 }
 
 int mem_hint_pmu_init(void)
 {
 	hrtimer_init(&pmu_poll_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL_PINNED);
-	pmu_poll_timer.function = mem_hint_pmu_timer;
+	pmu_poll_timer.function = pmu_timer_callback;
 	hrtimer_start(&pmu_poll_timer, ns_to_ktime(100000), HRTIMER_MODE_REL_PINNED);
 	pr_info("mem_hint: PMU auto-classifier started at 100us cadence\n");
 	return 0;

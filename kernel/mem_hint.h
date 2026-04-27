@@ -8,12 +8,21 @@
 #ifndef MEM_HINT_H
 #define MEM_HINT_H
 
+#ifdef __KERNEL__
 #include <linux/atomic.h>
+#include <linux/device.h>
 #include <linux/ktime.h>
 #include <linux/platform_device.h>
-#include <linux/sysfs.h>
 #include <linux/types.h>
+#else
+#include <stdint.h>
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint64_t u64;
+typedef int8_t s8;
+#endif
 
+#ifdef __KERNEL__
 struct mem_workload_hint {
 	u8 phase_id;
 	u16 latency_target_ns;
@@ -22,6 +31,16 @@ struct mem_workload_hint {
 	u8 priority;
 	u8 reserved[2];
 } __packed;
+#else
+struct mem_workload_hint {
+	u8 phase_id;
+	u16 latency_target_ns;
+	u16 bw_target_gbps;
+	u8 security_level;
+	u8 priority;
+	u8 reserved[2];
+} __attribute__((packed));
+#endif
 
 #define PHASE_PREFILL	0x01
 #define PHASE_DECODE	0x02
@@ -67,6 +86,15 @@ struct ecc_telemetry {
 	u64 p99_latency_ns;
 };
 
+#ifdef __KERNEL__
+struct pmu_sample {
+	u32 write_bw_gbps;
+	u32 read_bw_gbps;
+	u32 llc_miss_rate;
+	u32 bw_variance_pct;
+	u32 dram_cmd_rate;
+};
+
 extern atomic_t current_phase_id;
 extern enum mem_hint_channel active_channel;
 extern struct jedec_limits platform_limits;
@@ -74,7 +102,7 @@ extern struct ecc_telemetry ecc_state;
 extern ktime_t last_transition_time;
 extern u8 mem_hint_security_level;
 extern struct platform_driver mem_hint_platform_driver;
-extern const struct attribute_group *mem_hint_driver_groups[];
+extern struct platform_device *mem_hint_pdev;
 
 extern u32 decode_trcd;
 extern u32 decode_vswing_mv;
@@ -101,5 +129,6 @@ struct phy_config safety_clamp(struct phy_config proposed,
 			       struct jedec_limits limits,
 			       struct ecc_telemetry ecc);
 int safety_limiter_selftest(void);
+#endif
 
 #endif /* MEM_HINT_H */

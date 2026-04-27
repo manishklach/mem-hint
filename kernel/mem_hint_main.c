@@ -14,6 +14,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/uaccess.h>
+#include <linux/version.h>
 #include <asm/msr.h>
 
 #include "mem_hint.h"
@@ -38,12 +39,12 @@ struct ecc_telemetry ecc_state;
 ktime_t last_transition_time;
 u8 mem_hint_security_level;
 struct platform_driver mem_hint_platform_driver;
+struct platform_device *mem_hint_pdev;
 
 static int active_channel_param = CH_MSR;
 static struct class *mem_hint_class;
 static struct device *mem_hint_dev;
-static struct platform_device *mem_hint_platform_dev;
-static void __iomem *mc_mmio_base;
+static void __iomem *mc_mmio_base __maybe_unused;
 static bool illustrative_hw_writes;
 
 module_param_named(active_channel, active_channel_param, int, 0644);
@@ -238,20 +239,16 @@ int mem_hint_apply(const struct mem_workload_hint *h)
 	return 0;
 }
 
-static int mem_hint_open(struct inode *inode, struct file *file)
-{
-	if (!capable(CAP_SYS_ADMIN))
-		return -EPERM;
-
-	return 0;
-}
-
 static ssize_t mem_hint_write(struct file *file, const char __user *buf,
 			      size_t len, loff_t *ppos)
 {
 	struct mem_workload_hint hint;
 	int ret;
 
+	(void)file;
+	(void)ppos;
+	if (!capable(CAP_SYS_ADMIN))
+		return -EPERM;
 	if (len < sizeof(hint))
 		return -EINVAL;
 
@@ -276,7 +273,6 @@ static ssize_t mem_hint_write(struct file *file, const char __user *buf,
 
 static const struct file_operations mem_hint_fops = {
 	.owner = THIS_MODULE,
-	.open = mem_hint_open,
 	.write = mem_hint_write,
 };
 
@@ -297,7 +293,6 @@ struct platform_driver mem_hint_platform_driver = {
 	.remove = mem_hint_platform_remove,
 	.driver = {
 		.name = "mem_hint",
-		.groups = mem_hint_driver_groups,
 	},
 };
 
@@ -315,7 +310,11 @@ static int __init mem_hint_init(void)
 	if (ret < 0)
 		return ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
 	mem_hint_class = class_create("mem_hint");
+#else
+	mem_hint_class = class_create(THIS_MODULE, "mem_hint");
+#endif
 	if (IS_ERR(mem_hint_class)) {
 		ret = PTR_ERR(mem_hint_class);
 		goto err_chrdev;
@@ -333,11 +332,10 @@ static int __init mem_hint_init(void)
 	if (ret)
 		goto err_device;
 
-	mem_hint_platform_dev = platform_device_register_simple("mem_hint", -1,
-								NULL, 0);
-	if (IS_ERR(mem_hint_platform_dev)) {
-		ret = PTR_ERR(mem_hint_platform_dev);
-		goto err_platform_driver;
+	mem_hint_pdev = platform_device_register_simple("mem_hint", -1, NULL, 0);
+	if (IS_ERR(mem_hint_pdev)) {
+		pr_err("mem_hint: platform device registration failed\n");
+		mem_hint_pdev = NULL;
 	}
 
 	ret = safety_limiter_selftest();
@@ -362,8 +360,8 @@ static int __init mem_hint_init(void)
 err_sysfs:
 	mem_hint_sysfs_exit();
 err_platform_device:
-	platform_device_unregister(mem_hint_platform_dev);
-err_platform_driver:
+	if (mem_hint_pdev)
+		platform_device_unregister(mem_hint_pdev);
 	platform_driver_unregister(&mem_hint_platform_driver);
 err_device:
 	device_destroy(mem_hint_class, MKDEV(MEM_HINT_MAJOR, 0));
@@ -378,7 +376,8 @@ static void __exit mem_hint_exit(void)
 {
 	mem_hint_pmu_exit();
 	mem_hint_sysfs_exit();
-	platform_device_unregister(mem_hint_platform_dev);
+	if (mem_hint_pdev)
+		platform_device_unregister(mem_hint_pdev);
 	platform_driver_unregister(&mem_hint_platform_driver);
 	device_destroy(mem_hint_class, MKDEV(MEM_HINT_MAJOR, 0));
 	class_destroy(mem_hint_class);
