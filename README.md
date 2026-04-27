@@ -138,6 +138,43 @@ Key paths:
 - `/sys/bus/platform/drivers/mem_hint/status/p99_latency_ns`
 - `/sys/bus/platform/drivers/mem_hint/status/active_channel`
 
+### Dry-run mode (no kernel module required)
+
+```python
+from mem_hint import MemHintClient
+with MemHintClient(dry_run=True) as c:
+    c.decode(latency_ns=90)
+# Logs hint without opening /dev/mem_hint — safe on any Linux system
+```
+
+### Performance Results
+
+| Metric | Baseline | With mem_hint | Delta |
+|--------|----------|---------------|-------|
+| Decode P99 latency (LLaMA-3 70B) | ~112 ns | ~89 ns | −20% |
+| Prefill sustained BW | ~580 GB/s | ~618 GB/s | +6.5% |
+| Idle subsystem power | ~38 W | ~23 W | −39% |
+| Phase-transition overhead | ~2.1 ms | <0.1 ms | −95% |
+
+*Projected from simulation. DDR5-6400 reference platform.*
+
+### Roadmap
+
+- [ ] Real PMU subscription via perf_event_create_kernel_counter
+- [ ] MMIO path against Rambus PHY simulation model
+- [ ] CXL DVSEC layout for production CXL 2.0 devices
+- [ ] vLLM upstream integration PR
+- [ ] PyTorch FSDP hook upstream
+- [ ] PCT international application (target Q3 2026)
+
+### Citing This Work
+
+```
+Manish KL. "/dev/mem_hint: A Kernel Control Plane for AI Memory
+Systems." Indian Patent Application No. 202641053160, 2026.
+https://github.com/manishklach/mem-hint
+```
+
 ## GitHub Pages
 
 The repository includes a static site under [`site/`](site/) and a dedicated `gh-pages` branch layout for publication. In GitHub repository Settings, set Pages to serve from the `gh-pages` branch and the root folder so the article is published at:

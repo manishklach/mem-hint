@@ -1,8 +1,11 @@
 /*
- * phase_monitor.c - live sysfs monitor for /dev/mem_hint
+ * phase_monitor.c — live sysfs monitor for /dev/mem_hint
  * Patent Pending: Indian Patent Application No. 202641053160
  * Inventor: Manish KL, filed 26 April 2026
  * Reference implementation for research and interoperability discussion.
+ *
+ * Polls /sys/.../status/ every 200ms and renders an ANSI table.
+ * Ctrl+C stops cleanly.
  */
 
 #include <signal.h>
@@ -12,18 +15,18 @@
 
 #ifdef _WIN32
 #include <windows.h>
-static void sleep_100ms(void) { Sleep(100); }
+static void sleep_200ms(void) { Sleep(200); }
 #else
 #include <time.h>
-static void sleep_100ms(void)
+static void sleep_200ms(void)
 {
-	struct timespec ts = { 0, 100000000L };
+	struct timespec ts = {0, 200000000L};
 
 	nanosleep(&ts, NULL);
 }
 #endif
 
-#include "../include/mem_hint.h"
+#include "mem_hint.h"
 
 static volatile sig_atomic_t keep_running = 1;
 
@@ -33,58 +36,154 @@ static void on_signal(int signo)
 	keep_running = 0;
 }
 
-static int trim_status(char *buf)
+static void trim_nl(char *buf)
 {
-	size_t len;
+	size_t len = strlen(buf);
 
-	len = strlen(buf);
 	while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r')) {
 		buf[len - 1] = '\0';
 		len--;
 	}
+}
 
-	return 0;
+static const char *phase_name(const char *hex_str)
+{
+	unsigned long val;
+	char *end;
+
+	val = strtoul(hex_str, &end, 0);
+	if (end == hex_str)
+		return "UNKNOWN";
+
+	switch (val) {
+	case 0x01: return "PREFILL";
+	case 0x02: return "DECODE";
+	case 0x03: return "AGENTIC";
+	case 0x04: return "IDLE";
+	case 0x05: return "FORWARD";
+	case 0x06: return "BACKWARD";
+	default:   return "UNKNOWN";
+	}
 }
 
 int main(void)
 {
 	char phase[64];
 	char latency[64];
-	char correctable[64];
-	char transition[64];
+	char ecc_rate[64];
+	char channel[64];
 	int ret;
 
 	signal(SIGINT, on_signal);
 	signal(SIGTERM, on_signal);
 
-	printf("\033[2J\033[H");
+	/* Clear screen, hide cursor */
+	printf("\033[2J\033[H\033[?25l");
+
 	while (keep_running) {
-		ret = mem_hint_read_status("current_phase", phase, sizeof(phase));
+		ret  = mem_hint_read_status("current_phase", phase,
+					    sizeof(phase));
 		ret |= mem_hint_read_status("p99_latency_ns", latency,
 					    sizeof(latency));
-		ret |= mem_hint_read_status("ecc_correctable_rate", correctable,
-					    sizeof(correctable));
-		ret |= mem_hint_read_status("last_transition_ms", transition,
-					    sizeof(transition));
+		ret |= mem_hint_read_status("ecc_correctable_rate", ecc_rate,
+					    sizeof(ecc_rate));
+		ret |= mem_hint_read_status("active_channel", channel,
+					    sizeof(channel));
+
 		if (ret < 0) {
-			fprintf(stderr, "failed to read mem_hint status: %d\n", ret);
+			fprintf(stderr,
+				"ERROR: could not read sysfs status: %d\n",
+				ret);
+			printf("\033[?25h");
 			return EXIT_FAILURE;
 		}
 
-		trim_status(phase);
-		trim_status(latency);
-		trim_status(correctable);
-		trim_status(transition);
+		trim_nl(phase);
+		trim_nl(latency);
+		trim_nl(ecc_rate);
+		trim_nl(channel);
 
+		/* Move cursor to top-left, draw table */
 		printf("\033[H");
-		printf("current_phase | p99_latency_ns | ecc_correctable_rate | last_transition_ms\n");
-		printf("------------- | -------------- | -------------------- | ------------------\n");
-		printf("%13s | %14s | %20s | %18s\n",
-		       phase, latency, correctable, transition);
+		printf("\xE2\x94\x8C\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x90\n");
+
+		printf("  /dev/mem_hint \xe2\x80\x94 "
+		       "Live Status Monitor                \n");
+
+		printf("\xE2\x94\x9C\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\xAC\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\xAC\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\xAC\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\xA4\n");
+
+		printf("  %-14s \xe2\x94\x82 %-8s \xe2\x94\x82 %-8s "
+		       "\xe2\x94\x82 %-9s \n",
+		       "Current Phase", "P99 (ns)", "ECC Rate", "Chan.");
+
+		printf("\xE2\x94\x9C\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\xBC\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\xBC\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\xBC\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\xA4\n");
+
+		printf("  %-7s (%s) \xe2\x94\x82 %8s \xe2\x94\x82 %8s "
+		       "\xe2\x94\x82 %-9s \n",
+		       phase_name(phase), phase, latency, ecc_rate, channel);
+
+		printf("\xE2\x94\x94\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\xB4\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\xB4\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\xB4\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80\xE2\x94\x80"
+		       "\xE2\x94\x98\n");
+
 		fflush(stdout);
-		sleep_100ms();
+		sleep_200ms();
 	}
 
-	printf("\nmonitor stopped\n");
+	/* Restore cursor */
+	printf("\033[?25h\nMonitor stopped.\n");
 	return EXIT_SUCCESS;
 }

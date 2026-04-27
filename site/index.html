@@ -6,14 +6,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1"
-    />
-    <title>/dev/mem_hint - Workload-Aware Memory Hint Interface</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>/dev/mem_hint — AI Memory Hint Interface</title>
     <meta
       name="description"
-      content="Reference implementation of /dev/mem_hint, a workload-aware memory signaling hint interface for AI computing systems."
+      content="Reference implementation of /dev/mem_hint, a workload-aware memory signaling interface for AI computing systems. Patent Pending IN 202641053160."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -23,13 +20,13 @@
     />
     <style>
       :root {
-        --bg: #0d1117;
-        --panel: #131a22;
-        --panel-2: #1a232d;
+        --bg: #05080f;
+        --panel: #0a1018;
+        --panel-2: #111a26;
         --text: #eef2f6;
         --muted: #98a7b8;
-        --accent: #f2b84b;
-        --line: rgba(242, 184, 75, 0.18);
+        --accent: #e8a830;
+        --line: rgba(232, 168, 48, 0.18);
       }
 
       * {
@@ -40,40 +37,88 @@
         margin: 0;
         font-family: "IBM Plex Mono", monospace;
         background:
-          radial-gradient(circle at top, rgba(242, 184, 75, 0.16), transparent 32%),
-          linear-gradient(180deg, #090d12 0%, var(--bg) 45%, #0a0f15 100%);
+          radial-gradient(circle at top, rgba(232, 168, 48, 0.12), transparent 30%),
+          linear-gradient(180deg, #03060c 0%, var(--bg) 45%, #04070d 100%);
         color: var(--text);
         min-height: 100vh;
+      }
+
+      /* Sticky header */
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        backdrop-filter: blur(16px);
+        background: rgba(5, 8, 15, 0.86);
+        border-bottom: 1px solid var(--line);
+        padding: 14px 0;
+      }
+
+      .site-header .shell {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .brand {
+        color: var(--accent);
+        font-weight: 700;
+        font-size: 1rem;
+        text-decoration: none;
+        letter-spacing: 0.04em;
+      }
+
+      .gh-link {
+        text-decoration: none;
+        color: var(--muted);
+        font-size: 0.88rem;
+        border: 1px solid var(--line);
+        padding: 8px 14px;
+        border-radius: 10px;
+        transition: color 0.2s, border-color 0.2s;
+      }
+
+      .gh-link:hover {
+        color: var(--text);
+        border-color: var(--accent);
       }
 
       .shell {
         max-width: 1100px;
         margin: 0 auto;
-        padding: 48px 20px 24px;
+        padding: 0 20px;
       }
 
+      main.shell {
+        padding-top: 48px;
+        padding-bottom: 32px;
+      }
+
+      /* Hero */
       .hero {
         padding: 48px 28px;
         border: 1px solid var(--line);
-        background: rgba(19, 26, 34, 0.86);
+        background: rgba(10, 16, 24, 0.88);
         border-radius: 22px;
         box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
       }
 
       .badge {
         display: inline-block;
-        padding: 8px 12px;
+        padding: 8px 14px;
         border-radius: 999px;
-        background: rgba(242, 184, 75, 0.14);
+        background: rgba(232, 168, 48, 0.12);
         color: var(--accent);
         font-size: 0.82rem;
-        margin-bottom: 18px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(232, 168, 48, 0.22);
       }
 
       h1 {
-        margin: 0 0 12px;
-        font-size: clamp(2rem, 5vw, 4.4rem);
+        margin: 0 0 14px;
+        font-size: clamp(2.2rem, 5vw, 4.4rem);
         line-height: 1.02;
+        letter-spacing: -0.03em;
       }
 
       p.lead {
@@ -84,9 +129,10 @@
         font-size: 1rem;
       }
 
+      /* Feature cards */
       .cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         gap: 18px;
         margin-top: 28px;
       }
@@ -94,8 +140,14 @@
       .card {
         padding: 22px;
         border-radius: 18px;
-        background: linear-gradient(180deg, rgba(26, 35, 45, 0.95), rgba(13, 17, 23, 0.95));
+        background: linear-gradient(180deg, rgba(17, 26, 38, 0.96), rgba(5, 8, 15, 0.96));
         border: 1px solid rgba(255, 255, 255, 0.06);
+        transition: border-color 0.3s, transform 0.3s;
+      }
+
+      .card:hover {
+        border-color: rgba(232, 168, 48, 0.25);
+        transform: translateY(-2px);
       }
 
       .card h2 {
@@ -111,6 +163,35 @@
         font-size: 0.92rem;
       }
 
+      /* Stats row */
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-top: 24px;
+      }
+
+      .stat {
+        background: rgba(10, 16, 24, 0.75);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px 14px;
+        text-align: center;
+      }
+
+      .stat-val {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 6px;
+      }
+
+      .stat-lbl {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      /* Links */
       .links {
         display: flex;
         flex-wrap: wrap;
@@ -125,61 +206,99 @@
       .links a {
         text-decoration: none;
         border: 1px solid var(--line);
-        background: rgba(242, 184, 75, 0.08);
-        padding: 12px 14px;
+        background: rgba(232, 168, 48, 0.06);
+        padding: 12px 16px;
         border-radius: 12px;
+        font-size: 0.92rem;
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      .links a:hover {
+        background: rgba(232, 168, 48, 0.14);
+        border-color: var(--accent);
       }
 
       footer {
-        margin-top: 28px;
+        margin-top: 32px;
         color: var(--muted);
         font-size: 0.85rem;
         text-align: center;
+        padding-bottom: 20px;
+      }
+
+      @media (max-width: 700px) {
+        .stats {
+          grid-template-columns: repeat(2, 1fr);
+        }
       }
     </style>
   </head>
   <body>
+    <header class="site-header">
+      <div class="shell">
+        <a class="brand" href="index.html">/dev/mem_hint</a>
+        <a class="gh-link" href="https://github.com/manishklach/mem-hint">GitHub</a>
+      </div>
+    </header>
+
     <main class="shell">
       <section class="hero">
-        <div class="badge">Patent Pending IN 202641053160</div>
+        <div class="badge">Patent Pending · IN 202641053160</div>
         <h1>/dev/mem_hint</h1>
         <p class="lead">
-          A software-defined, workload-aware memory signaling hint interface
-          for AI computing systems, modeled as a production-style Linux kernel
-          reference implementation.
+          A software-defined, workload-aware memory signaling interface for AI computing systems.
+          Runtime phase intent reaches the memory controller before latency pain is visible.
         </p>
         <div class="cards">
           <article class="card">
             <h2>Predictive</h2>
             <p>
-              Supports a `500 us` pre-adjustment concept ahead of phase
-              transitions so the control path can move before latency pain is
-              fully visible.
+              500µs pre-adjustment before phase transitions. The memory subsystem adapts before
+              the workload shift is fully visible in controller telemetry.
             </p>
           </article>
           <article class="card">
             <h2>Cross-layer</h2>
             <p>
-              Connects runtime intent to kernel policy, firmware-visible
-              signaling, and PHY-facing behavior through one compact interface
-              contract.
+              Runtime → kernel → firmware → PHY. One compact 8-byte hint structure
+              bridges the semantic gap between application intent and hardware policy.
             </p>
           </article>
           <article class="card">
             <h2>Safe</h2>
             <p>
-              Keeps every workload request subordinate to an immutable hardware
-              safety limiter model with JEDEC and ECC-aware constraints.
+              Immutable hardware safety limiter. JEDEC bounds, ECC feedback, and security-hardened
+              mode ensure no software path can override physical constraints.
             </p>
           </article>
         </div>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-val">8B</div>
+            <div class="stat-lbl">Hint size</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val">3</div>
+            <div class="stat-lbl">Hardware channels</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val">−20%</div>
+            <div class="stat-lbl">Decode latency</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val">−39%</div>
+            <div class="stat-lbl">Idle power</div>
+          </div>
+        </div>
         <div class="links">
           <a href="writings/dev-mem-hint-kernel-control-plane-ai-memory-systems.html">
-            Read the blog post
+            Read the blog post →
           </a>
-          <a href="https://github.com/manishklach/mem-hint">GitHub repository</a>
+          <a href="https://github.com/manishklach/mem-hint">
+            GitHub repository →
+          </a>
           <a href="../PATENT_NOTICE.md">
-            Patent filing reference
+            Patent filing reference →
           </a>
         </div>
       </section>

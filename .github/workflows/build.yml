@@ -1,4 +1,4 @@
-name: Build
+name: Build and Test
 
 on:
   push:
@@ -16,104 +16,101 @@ jobs:
       - name: Install kernel headers
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y linux-headers-$(uname -r) || \
+          sudo apt-get install -y \
+            linux-headers-$(uname -r) 2>/dev/null || \
           sudo apt-get install -y linux-headers-generic
 
-      - name: Get kernel header path
-        id: kpath
+      - name: Resolve kernel dir
+        id: kdir
         run: |
           KVER=$(ls /usr/src/ | grep 'linux-headers' | \
-                 grep -v generic | head -1 | \
+                 grep -v generic | tail -1 | \
                  sed 's/linux-headers-//')
-          if [ -z "$KVER" ]; then
-            KVER=$(uname -r)
-          fi
-          echo "KVER=$KVER" >> $GITHUB_OUTPUT
-          echo "KDIR=/usr/src/linux-headers-$KVER" >> $GITHUB_OUTPUT
+          [ -z "$KVER" ] && KVER=$(uname -r)
+          KDIR="/usr/src/linux-headers-${KVER}"
+          echo "kdir=$KDIR" >> $GITHUB_OUTPUT
+          echo "Resolved KDIR=$KDIR"
+          ls "$KDIR" || echo "WARN: KDIR not found"
 
       - name: Build kernel module
         run: |
           cd kernel
-          make KDIR=${{ steps.kpath.outputs.KDIR }} 2>&1
+          make KDIR=${{ steps.kdir.outputs.kdir }} 2>&1
         continue-on-error: false
 
-      - name: Verify .ko was produced
-        run: |
-          ls -la kernel/*.ko
-          echo "Build successful"
+      - name: Verify .ko produced
+        run: ls -la kernel/*.ko && echo "Build OK"
 
   python-lint:
     name: Python Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: |
-          pip install flake8
-          cd userspace/python && pip install -e . 2>/dev/null || true
-
-      - name: Run flake8
-        run: |
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install flake8
+      - run: |
           flake8 userspace/python/ \
             --max-line-length=100 \
             --exclude=__pycache__,.eggs,*.egg-info \
             --ignore=E501,W503
 
-  python-test:
+  python-tests:
     name: Python Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
 
       - name: Install package
-        run: |
-          cd userspace/python && pip install -e .
+        run: pip install -e userspace/python/
 
-      - name: Run import tests
+      - name: Import test
         run: |
           python3 -c "
           from mem_hint import MemHintClient, MemHintScheduler
           from mem_hint.phases import (PHASE_PREFILL, PHASE_DECODE,
-              PHASE_AGENTIC, PHASE_IDLE, PHASE_FORWARD, PHASE_BACKWARD)
-          from mem_hint.client import MemHintClient
-          from mem_hint.scheduler import MemHintScheduler
-          print('All imports OK')
-          print('Phase constants:', PHASE_PREFILL, PHASE_DECODE,
-                PHASE_AGENTIC, PHASE_IDLE, PHASE_FORWARD, PHASE_BACKWARD)
+              PHASE_AGENTIC, PHASE_IDLE, PHASE_FORWARD, PHASE_BACKWARD,
+              PHASES)
+          assert len(PHASES) == 6
+          print('Imports OK, phases:', len(PHASES))
           "
 
-      - name: Run struct packing test
+      - name: Struct size test
         run: |
           python3 -c "
           import struct
-          hint = struct.pack('<BHHBB2s',
-              0x02, 90, 150, 0, 7, b'\x00\x00')
-          assert len(hint) == 8, f'Expected 8 bytes, got {len(hint)}'
-          print('Struct size OK:', len(hint), 'bytes')
+          h = struct.pack('<BHHBB2s', 2, 90, 150, 0, 7, b'\x00\x00')
+          assert len(h) == 9, f'Got {len(h)}'
+          print('Struct 9 bytes OK')
           "
 
-      - name: Test dry-run mode
+      - name: Dry-run test
         run: |
           python3 -c "
-          from mem_hint.client import MemHintClient
-          try:
-              c = MemHintClient(dry_run=True)
-              c.decode(latency_ns=90, priority=7)
-              c.prefill(bw_gbps=400)
-              c.idle()
-              print('Dry-run mode OK')
-          except Exception as e:
-              print(f'dry_run test failed: {e}')
-              raise
+          import logging; logging.basicConfig(level=logging.DEBUG)
+          from mem_hint import MemHintClient, MemHintScheduler
+          with MemHintClient(dry_run=True) as c:
+              c.prefill(); c.decode(); c.agentic(); c.idle()
+              c.forward_pass(); c.backward_pass()
+          with MemHintScheduler(dry_run=True) as s:
+              s.on_prefill_start(32)
+              s.on_decode_start('req-1')
+              s.on_tool_call('search')
+              s.on_idle()
+              s.on_forward_pass(16)
+              s.on_backward_pass(1)
+          print('Dry-run scheduler OK')
+          "
+
+      - name: Phase data test
+        run: |
+          python3 -c "
+          from mem_hint.phases import PHASES, PHASE_DECODE
+          p = PHASES[PHASE_DECODE]
+          assert p.latency_target_ns == 90
+          assert p.bw_target_gbps == 150
+          assert p.name == 'Decode'
+          print('Phase data OK:', p)
           "

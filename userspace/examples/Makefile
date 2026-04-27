@@ -1,15 +1,14 @@
-# Patent Pending: Indian Patent Application No. 202641053160
-
-CC ?= gcc
-CFLAGS ?= -O2 -Wall -Wextra -I../include
+CC     = gcc
+CFLAGS = -O2 -Wall -I../include
+LDFLAGS = -L../lib -lmem_hint
 
 all: basic_hint phase_monitor
 
-basic_hint: basic_hint.c ../include/mem_hint.h
-	$(CC) $(CFLAGS) -o $@ basic_hint.c
+basic_hint: basic_hint.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
-phase_monitor: phase_monitor.c ../lib/mem_hint.c ../include/mem_hint.h
-	$(CC) $(CFLAGS) -o $@ phase_monitor.c ../lib/mem_hint.c
+phase_monitor: phase_monitor.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 clean:
 	rm -f basic_hint phase_monitor

@@ -1,64 +1,85 @@
 /*
- * basic_hint.c - minimal /dev/mem_hint example
+ * basic_hint.c — minimal /dev/mem_hint example
  * Patent Pending: Indian Patent Application No. 202641053160
  * Inventor: Manish KL, filed 26 April 2026
  * Reference implementation for research and interoperability discussion.
  *
- * Build with: gcc -O2 -o basic_hint basic_hint.c
+ * Build with:
+ *   cd userspace/lib && make && cd ../examples && make basic_hint
  */
 
 #include <errno.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
-#include "../include/mem_hint.h"
+#include "mem_hint.h"
 
 int main(void)
 {
 	struct mem_workload_hint hint;
-	char status[64];
-	FILE *fp;
+	char phase_buf[64];
+	char latency_buf[64];
 	int fd;
-	ssize_t written;
+	int ret;
 
-	memset(&hint, 0, sizeof(hint));
-	hint.phase_id = PHASE_DECODE;
-	hint.latency_target_ns = 90;
-	hint.bw_target_gbps = 150;
-	hint.priority = 7;
-
-	fd = open("/dev/mem_hint", O_WRONLY);
+	/* Step 1: Open /dev/mem_hint */
+	fd = mem_hint_open("/dev/mem_hint");
 	if (fd < 0) {
-		perror("open(/dev/mem_hint)");
-		return EXIT_FAILURE;
+		fprintf(stderr, "ERROR: mem_hint_open failed: %s\n",
+			strerror(-fd));
+		return 1;
 	}
 
-	written = write(fd, &hint, sizeof(hint));
-	if (written < 0 || (size_t)written != sizeof(hint)) {
-		perror("write(mem_hint)");
-		close(fd);
-		return EXIT_FAILURE;
-	}
-	close(fd);
+	/* Step 2: Send PHASE_DECODE hint */
+	memset(&hint, 0, sizeof(hint));
+	hint.phase_id         = PHASE_DECODE;   /* 0x02 */
+	hint.latency_target_ns = 90;
+	hint.bw_target_gbps   = 150;
+	hint.priority         = 7;
 
-	fp = fopen("/sys/bus/platform/drivers/mem_hint/status/current_phase", "r");
-	if (!fp) {
-		perror("fopen(current_phase)");
-		return EXIT_FAILURE;
+	ret = mem_hint_send(fd, &hint);
+	if (ret < 0) {
+		fprintf(stderr, "ERROR: mem_hint_send failed: %s\n",
+			strerror(-ret));
+		mem_hint_close(fd);
+		return 1;
+	}
+	printf("Decode hint sent: phase=0x%02x lat=%u bw=%u pri=%u\n",
+	       hint.phase_id, hint.latency_target_ns,
+	       hint.bw_target_gbps, hint.priority);
+
+	/* Step 3: Read back current_phase from sysfs */
+	ret = mem_hint_read_status("current_phase", phase_buf,
+				   sizeof(phase_buf));
+	if (ret < 0) {
+		fprintf(stderr, "WARNING: could not read current_phase: %s\n",
+			strerror(-ret));
+	} else {
+		phase_buf[strcspn(phase_buf, "\n")] = '\0';
+		printf("  current_phase = %s\n", phase_buf);
 	}
 
-	if (!fgets(status, sizeof(status), fp)) {
-		fprintf(stderr, "failed to read current_phase: %s\n",
-			strerror(errno));
-		fclose(fp);
-		return EXIT_FAILURE;
+	/* Step 4: Read back p99_latency_ns */
+	ret = mem_hint_read_status("p99_latency_ns", latency_buf,
+				   sizeof(latency_buf));
+	if (ret < 0) {
+		fprintf(stderr, "WARNING: could not read p99_latency_ns: %s\n",
+			strerror(-ret));
+	} else {
+		latency_buf[strcspn(latency_buf, "\n")] = '\0';
+		printf("  p99_latency_ns = %s\n", latency_buf);
 	}
-	fclose(fp);
 
-	status[strcspn(status, "\n")] = '\0';
-	printf("decode hint sent successfully, current phase=%s\n", status);
-	return EXIT_SUCCESS;
+	/* Step 5: Print formatted status */
+	printf("\n--- Status ---\n");
+	printf("Phase: %s | P99 latency: %s ns\n",
+	       phase_buf[0] ? phase_buf : "N/A",
+	       latency_buf[0] ? latency_buf : "N/A");
+
+	/* Step 6: Close */
+	mem_hint_close(fd);
+	printf("Done.\n");
+
+	return 0;
 }
